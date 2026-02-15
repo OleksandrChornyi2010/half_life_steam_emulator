@@ -42,7 +42,7 @@ struct Steam_Matchmaking_Request {
     HServerListRequest id;
     ISteamMatchmakingServerListResponse *callbacks;
 	ISteamMatchmakingServerListResponse001 *old_callbacks;
-    bool completed, cancelled, released;
+    bool completed, cancelled, released, finished_pushing, responded;
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
 	EMatchMakingType type{};
 };
