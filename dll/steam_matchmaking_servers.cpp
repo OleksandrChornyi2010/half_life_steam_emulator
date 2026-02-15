@@ -76,79 +76,80 @@ HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, IS
         file_size = file_size_(file_path);*/
         return id;
     } else if (type == eHistoryServer) {
-        std::thread worker(&Steam_Matchmaking_Servers::RefreshServersFromFile, this, "serverbrowser_hist.vdf", id, iApp, type);
+        std::thread worker(&Steam_Matchmaking_Servers::RefreshServersFromFile, this, "serverbrowser_hist.vdf", id, iApp, type, requests.size() - 1);
         worker.detach();
         return id;
     }
     return id;
 }
 
-void Steam_Matchmaking_Servers::RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type) {
+void Steam_Matchmaking_Servers::RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type, size_t request_index) {
     std::vector<std::pair<std::string, int>> addresses = ParseFile(filePath);
 
     for (auto& addr : addresses) {
-        Gameserver result;
-        // TODO: Get real server data
-        if (PerformA2SQuery(addr.first, addr.second, appid, &result)) { // TODO: Make multi threaded
-            {
-                std::lock_guard<std::recursive_mutex> lock(global_mutex);
-                Steam_Matchmaking_Servers_Gameserver g{};
-                std::cout << "addr.first: " << addr.first << std::endl;
-                auto itet_addr = inet_addr(addr.first.c_str());
-                std::cout << "itet_addr: " << itet_addr << std::endl; // Специально сделал опечатку в имени переменной
-                g.server.set_ip(itet_addr);
-                std::cout << "Pre-ip " << g.server.ip() << std::endl;
-                char buffer[INET_ADDRSTRLEN];
-                struct in_addr addr_in;
-                addr_in.s_addr = g.server.ip();
-
-                if (inet_ntop(AF_INET, &addr_in, buffer, INET_ADDRSTRLEN)) {
-                    std::string normal_ip(buffer);
-                    std::cout << "Post-IP: " << normal_ip << std::endl;
-                }
-                else {
-                    std::cout << "Inet-ntop failed " << std::endl;
-                }
-                uint32_t ip_int = g.server.ip();
-
-                struct in_addr addr_try;
-                addr_try.s_addr = ip_int;
-                char* ip_string = inet_ntoa(addr_try);
-                std::cout << "Post-IP-Try-2: " << ip_string << std::endl;
-
-                g.server.set_port(addr.second);
-                g.server.set_query_port(addr.second);
-                std::cout << "Pre-dir" << g.server.mod_dir() << std::endl;
-                //g.server.set_mod_dir("valve");
-                g.server.set_appid(appid);
-                g.server.set_map_name("de_dust");
-                g.server.set_server_name("Half-Life");
-                g.server.set_mod_dir("valve");
-                g.server.set_game_description("Half-Life");
-                g.server.set_max_player_count(32);
-                g.server.set_num_players(1);
-                g.server.set_version(1122);
-                g.server.set_id(85568397540602928);
-                g.server.set_password_protected(false);
-                g.server.set_secure(false);
-                g.type = type;
-                g.last_recv = std::chrono::high_resolution_clock::now();
-
-                gameservers.push_back(g);
-                // std::cout << "Pushed back: " << g.server.mod_dir() << std::endl;
+        if (request_index < requests.size() && requests[request_index].id == id) {
+            if (requests[request_index].cancelled) {
+                std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&User canceled request by request_index: " << id << " new addr: " << addr.first << std::endl;
+                break;
             }
         }
-    }
-    for (auto &r : requests) {
-        if (r.id == id) {
-            std::cout << "///////////////////////////////////////////Marking as complete: " << id << std::endl;
-            //ReadInput();
-            // r.finished_pushing = true;
+        Gameserver result;
+        Steam_Matchmaking_Servers_Gameserver g{};
+        // TODO: Get real server data
+        if (GetServerData(addr.first, addr.second, appid, &result)) { // TODO: Make multi threaded
+            std::lock_guard<std::recursive_mutex> lock(global_mutex);
+            std::cout << "addr.first: " << addr.first << std::endl;
+            auto itet_addr = inet_addr(addr.first.c_str());
+            std::cout << "itet_addr: " << itet_addr << std::endl; // Специально сделал опечатку в имени переменной
+            g.server.set_ip(itet_addr);
+            std::cout << "Pre-ip " << g.server.ip() << std::endl;
+            char buffer[INET_ADDRSTRLEN];
+            struct in_addr addr_in;
+            addr_in.s_addr = g.server.ip();
+
+            if (inet_ntop(AF_INET, &addr_in, buffer, INET_ADDRSTRLEN)) {
+                std::string normal_ip(buffer);
+                std::cout << "Post-IP: " << normal_ip << std::endl;
+            }
+            else {
+                std::cout << "Inet-ntop failed " << std::endl;
+            }
+            uint32_t ip_int = g.server.ip();
+
+            struct in_addr addr_try;
+            addr_try.s_addr = ip_int;
+            char* ip_string = inet_ntoa(addr_try);
+            std::cout << "Post-IP-Try-2: " << ip_string << std::endl;
+
+            g.server.set_port(addr.second);
+            g.server.set_query_port(addr.second);
+            //g.server.set_mod_dir("valve");
+            g.server.set_appid(appid); // TODO: AppID set needs to be done in HLDSQuery.get_info()
+            g.server.set_map_name("de_dust");
+            g.server.set_server_name(ip_string);
+            g.server.set_mod_dir("valve");
+            g.server.set_game_description("Half-Life");
+            g.server.set_max_player_count(32);
+            g.server.set_num_players(1);
+            g.server.set_version(1122);
+            g.server.set_id(85568397540602928);
+            g.server.set_password_protected(false);
+            g.server.set_secure(false);
+            g.type = type;
+            g.last_recv = std::chrono::high_resolution_clock::now();
+
+            gameservers.push_back(g);
         }
-        else {
-            std::cout << "wrong id: " << id << "//////////////////////////////////////" << std::endl;
-        }
     }
+    //std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    if (request_index < requests.size() && requests[request_index].id == id) {
+        requests[request_index].finished_pushing = true;
+        std::cout << "////////////////////////////////////Marking as complete by request_index: " << id << std::endl;
+    }
+    else {
+        std::cout << "wrong id: " << id << "//////////////////////////////////////" << std::endl;
+    }
+
 }
 
 std::vector<std::pair<std::string, int>> Steam_Matchmaking_Servers::ParseFile(std::string filePath) {
@@ -191,7 +192,7 @@ std::vector<std::pair<std::string, int>> Steam_Matchmaking_Servers::ParseFile(st
     return servers;
 }
 
-bool Steam_Matchmaking_Servers::PerformA2SQuery(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data) // TODO: Rename me
+bool Steam_Matchmaking_Servers::GetServerData(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data) // TODO: Rename me
 {
     HLDSQuery query(ip, port, appid);
     query.get_info(out_data);
@@ -329,18 +330,16 @@ void Steam_Matchmaking_Servers::ReleaseRequest( HServerListRequest hServerListRe
 {
     PRINT_DEBUG("ReleaseRequest %p\n", hServerListRequest);
     std::cout << "=================== Releasing request" << std::endl;
-    auto g = std::begin(requests);
-    while (g != std::end(requests)) {
-        if (g->id == hServerListRequest) {
+    auto r = std::begin(requests);
+    while (r != std::end(requests)) {
+        if (r->id == hServerListRequest) {
+            std::lock_guard<std::recursive_mutex> lock(global_mutex);
             //NOTE: some garbage games release the request before getting server details from it.
-            //     g = requests.erase(g);
-            // } else {
-            //TODO: eventually delete the released request.
-            g->cancelled = true;
-            g->released = true;
+            r = requests.erase(r);
         }
-
-        ++g;
+        else {
+            ++r;
+        }
     }
 }
 
@@ -517,13 +516,13 @@ void Steam_Matchmaking_Servers::CancelQuery( HServerListRequest hRequest )
 {
     PRINT_DEBUG("CancelQuery %p\n", hRequest);
     std::cout << "Canceling Query =============================" << std::endl;
-    auto g = std::begin(requests);
-    while (g != std::end(requests)) {
-        if (g->id == hRequest) {
-            g->cancelled = true;
+    auto r = std::begin(requests);
+    while (r != std::end(requests)) {
+        if (r->id == hRequest) {
+            r->cancelled = true;
         }
 
-        ++g;
+        ++r;
     }
 }
  
@@ -669,21 +668,13 @@ void Steam_Matchmaking_Servers::RunCallbacks()
 {
     PRINT_DEBUG("Steam_Matchmaking_Servers::RunCallbacks\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
-    /*std::cout << "GS: " << std::endl;
-    for (const auto& item : gameservers) {
-        std::cout << item.type << " ";
-    }
-    std::cout << "]" << std::endl;*/
-    // if (!gameservers.empty()) {
-    //     std::cout << "Gameservers" << std::endl;
-    // }
 
     PRINT_DEBUG("REQUESTS %zu gs: %zu\n", requests.size(), gameservers.size());
 
     for (auto &r : requests) {
-        if (r.cancelled || r.responded) continue;
+        if (r.responded) continue;
 
-        if (r.completed) {
+        if (r.completed || r.cancelled) {
             if (!r.gameservers_filtered.empty()) {
                 r.callbacks->RefreshComplete(r.id, eServerResponded);
                 std::cout << "Refresh complete (responded): " << r.finished_pushing << " g.l: " << r.gameservers_filtered.size() << std::endl;
@@ -696,11 +687,6 @@ void Steam_Matchmaking_Servers::RunCallbacks()
             continue;
         }
         if (r.callbacks) {
-            int i = 0;
-            if (!r.gameservers_filtered.empty()) {
-                i = r.gameservers_filtered.size() - 1;
-                // std::cout << "\nLast index: " << i << std::endl;
-            }
             auto g = std::begin(gameservers);
             while (g != std::end(gameservers)) {
                 if (check_timedout(g->last_recv, SERVER_TIMEOUT)) {
@@ -709,13 +695,26 @@ void Steam_Matchmaking_Servers::RunCallbacks()
                     std::cout << "Time out" << std::endl;
                 } else {
                     if (g->server.appid() == r.appid) {
-                        r.gameservers_filtered.push_back(std::move(*g));
-                        r.callbacks->ServerResponded(r.id, i);
-                        std::cout << "Pushing back server: " << r.gameservers_filtered.back().server.ip() << " r.finished: " << r.finished_pushing << " r.comp: " << r.completed << " r.gf: " << r.gameservers_filtered.size() << std::endl;
-                        g = gameservers.erase(g);
-                        ++i;
-                    } else {
+                        /*std::cout << "GS: [" << std::endl;
+                        for (const auto& item : r.gameservers_filtered) {
+                            std::cout << item.server.ip() << " ";
+                        }
+                        std::cout << "]" << std::endl;*/
+                        char buffer[INET_ADDRSTRLEN];
+                        struct in_addr addr_in;
+                        addr_in.s_addr = g->server.ip();
 
+                        if (inet_ntop(AF_INET, &addr_in, buffer, INET_ADDRSTRLEN)) {
+                            std::string normal_ip(buffer);
+                            std::cout << "Pushing back server (1): " << g->server.ip() << "(2)" << normal_ip << " pre-i: " << r.i << " r.finished: " << r.finished_pushing << " r.comp: " << r.completed << " r.gf: " << r.gameservers_filtered.size() << std::endl;
+                        }
+                        r.gameservers_filtered.push_back(std::move(*g));
+                        r.callbacks->ServerResponded(r.id, r.i);
+
+                        g = gameservers.erase(g);
+                        std::cout << "Next gam: " << g->server.ip() << std::endl;
+                        ++r.i;
+                    } else {
                         ++g;
                     }
                 }

@@ -43,6 +43,7 @@ struct Steam_Matchmaking_Request {
     ISteamMatchmakingServerListResponse *callbacks;
 	ISteamMatchmakingServerListResponse001 *old_callbacks;
     bool completed, cancelled, released, finished_pushing, responded;
+	int i = 0;
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
 	EMatchMakingType type{};
 };
@@ -58,8 +59,8 @@ public ISteamMatchmakingServers001
     std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
 	int server_list_request = 0;
 	void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
-	bool PerformA2SQuery(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data);
-	void RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type);
+	bool GetServerData(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data);
+	void RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type, size_t request_index);
 	void ReadInput();
 	std::vector<std::pair<std::string, int>> ParseFile(std::string);
 
