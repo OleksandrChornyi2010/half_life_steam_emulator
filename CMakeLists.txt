@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.6)
 
 # Set the project name
 project(goldberg_emulator)
-
+add_definitions(-DPROTOBUF_CONSTEXPR=constexpr)
 if(MSVC)
   # Set static environment (results in static compile flags) if Visual Studio is used (dynamic by default)
 	# Officially recommended solution: https://gitlab.kitware.com/cmake/community/wikis/FAQ#how-can-i-build-my-msvc-application-with-a-static-runtime
@@ -24,7 +24,7 @@ endif()
 option(EMU_EXPERIMENTAL_BUILD "Enable experimental build" OFF)
 
 # Set CXX standard
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -32,6 +32,28 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 include(FindProtobuf)
 find_package(Protobuf 3.1.0 REQUIRED)
 
+if(UNIX AND NOT APPLE)
+	file(GLOB ABSL_LIBS "/usr/lib32/libabsl_*.a")
+	file(GLOB UTF_LIBS "/usr/lib32/libutf8_*.a")
+
+	set(MY_STATIC_PROTO_DEPS
+			-Wl,--start-group
+			${Protobuf_LIBRARY}
+			${ABSL_LIBS}
+			${UTF_LIBS}
+			-lz
+			-Wl,--end-group
+	)
+
+	set(Protobuf_LIBRARIES ${MY_STATIC_PROTO_DEPS})
+	if(TARGET protobuf::libprotobuf)
+		set_target_properties(protobuf::libprotobuf PROPERTIES
+				INTERFACE_LINK_LIBRARIES "${MY_STATIC_PROTO_DEPS}")
+	endif()
+
+	message(STATUS "Static Protobuf Group enabled with ${Protobuf_LIBRARY}")
+endif()
+# ----------------------------------------------
 # Generate the .h and .cxx files for dll/net.proto
 protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS dll/net.proto)
 
@@ -109,8 +131,18 @@ add_library(${LIB_STEAM_API}
   ${DLL_SRC_SHARED}
   ${PROTO_SRCS}
   ${PROTO_HDRS}
+		dll/vdf_parser.cpp
+		dll/vdf_parser.h
 )
 
+add_custom_command(TARGET ${LIB_STEAM_API}
+		POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E echo "Running post-build script for ${LIB_STEAM_API}..."
+		COMMAND ./post_build.sh
+		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+		COMMENT "Executing custom steps after build is finished"
+		VERBATIM
+)
 # Include the required directories
 target_include_directories(${LIB_STEAM_API}
   PRIVATE

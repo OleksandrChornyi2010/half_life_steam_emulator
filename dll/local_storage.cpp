@@ -271,7 +271,7 @@ static std::vector<struct File_Data> get_filenames_recursive(std::string base_pa
 }
 
 #else
-
+std::string Local_Storage::data_path;
 /* recursive mkdir */
 static int mkdir_p(const char *dir, const mode_t mode) {
     char tmp[PATH_MAX_STRING_SIZE];
@@ -486,7 +486,7 @@ static std::string desanitize_file_name(std::string name)
 Local_Storage::Local_Storage(std::string save_directory)
 {
     this->save_directory = save_directory;
-
+    Local_Storage::data_path = save_directory;
     if (this->save_directory.back() != *PATH_SEPARATOR) {
         this->save_directory.append(PATH_SEPARATOR);
     }
@@ -555,7 +555,6 @@ int Local_Storage::store_data(std::string folder, std::string file, char *data, 
 
     return store_file_data(save_directory + appid + folder, file, data, length);
 }
-
 int Local_Storage::store_data_settings(std::string file, char *data, unsigned int length)
 {
     return store_file_data(get_global_settings_path(), file, data, length);

@@ -79,6 +79,7 @@ class Settings {
     std::map<std::string, Leaderboard_config> leaderboards;
     std::map<std::string, Stat_config> stats;
     bool create_unknown_leaderboards;
+
     uint16 port;
 
 public:
@@ -109,7 +110,7 @@ public:
     unsigned int DLCCount();
     bool hasDLC(AppId_t appID);
     bool getDLC(unsigned int index, AppId_t &appID, bool &available, std::string &name);
-
+    bool matchmaking_server_list_always_lan_type = false;
     //Depots
     std::vector<DepotId_t> depots;
 

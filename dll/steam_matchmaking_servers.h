@@ -34,6 +34,7 @@ struct Steam_Matchmaking_Servers_Direct_IP_Request {
 struct Steam_Matchmaking_Servers_Gameserver {
     Gameserver server;
     std::chrono::high_resolution_clock::time_point last_recv;
+	EMatchMakingType type{};
 };
 
 struct Steam_Matchmaking_Request {
@@ -43,6 +44,7 @@ struct Steam_Matchmaking_Request {
 	ISteamMatchmakingServerListResponse001 *old_callbacks;
     bool completed, cancelled, released;
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
+	EMatchMakingType type{};
 };
 
 class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
@@ -54,9 +56,17 @@ public ISteamMatchmakingServers001
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers;
     std::vector <struct Steam_Matchmaking_Request> requests;
     std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
+	int server_list_request = 0;
 	void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
+	bool PerformA2SQuery(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data);
+	void RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type);
+	void ReadInput();
+	std::vector<std::pair<std::string, int>> ParseFile(std::string);
+
 public:
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
+	HServerListRequest RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type);
+
 	// Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
 	// Each call allocates a new asynchronous request object.
 	// Request object must be released by calling ReleaseRequest( hServerListRequest )
@@ -73,7 +83,6 @@ public:
 	void RequestFavoritesServerList( AppId_t iApp, MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse001 *pRequestServersResponse );
 	void RequestHistoryServerList( AppId_t iApp, MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse001 *pRequestServersResponse );
 	void RequestSpectatorServerList( AppId_t iApp, MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse001 *pRequestServersResponse );
-
 	// Releases the asynchronous request object and cancels any pending query on it if there's a pending query in progress.
 	// RefreshComplete callback is not posted when request is released.
 	void ReleaseRequest( HServerListRequest hServerListRequest );
@@ -107,7 +116,7 @@ public:
 			In the simplest case where Boolean expressions are not nested, this is simply
 			the number of operands.
 
-			For example, to match servers on a particular map or with a particular tag, would would
+			For example, to match servers on a particular map or with a particular tag, would
 			use these filters.
 
 				( server.map == "cp_dustbowl" || server.gametags.contains("payload") )

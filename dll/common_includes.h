@@ -130,7 +130,7 @@ inline void reset_LastError()
     #define PATH_MAX_STRING_SIZE 512
 
     #ifndef EMU_RELEASE_BUILD
-        #define PRINT_DEBUG(...) {FILE *t = fopen("STEAM_LOG.txt", "a"); fprintf(t, __VA_ARGS__); fclose(t);}
+        #define PRINT_DEBUG(...) //{FILE *t = fopen("STEAM_LOG.txt", "a"); fprintf(t, __VA_ARGS__); fclose(t);}
     #endif
     #define PATH_SEPARATOR "/" 
 
@@ -191,7 +191,7 @@ inline std::string ascii_to_lowercase(std::string data) {
 #define CLIENT_HSTEAMUSER 1
 #define SERVER_HSTEAMUSER 1
 
-#define DEFAULT_NAME "Noob"
+#define DEFAULT_NAME "Player"
 #define PROGRAM_NAME_1 "Go"
 #define PROGRAM_NAME_2 "ld"
 #define PROGRAM_NAME_3 "be"

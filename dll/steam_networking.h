@@ -56,7 +56,7 @@ struct steam_connection_socket {
     SNetSocket_t other_id;
     std::vector<Network_Old> data_packets;
 };
-
+  
 class Steam_Networking :
 public ISteamNetworking001,
 public ISteamNetworking002,

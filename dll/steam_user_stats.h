@@ -432,7 +432,7 @@ bool UpdateAvgRateStat( const char *pchName, float flCountThisSession, double dS
 
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 
-    char data[sizeof(float) + sizeof(float) + sizeof(double)];
+    char data[sizeof(float) + sizeof(double) + sizeof(double)];
     int read_data = local_storage->get_data(Local_Storage::stats_storage_folder, stat_name, (char* )data, sizeof(*data));
     float oldcount = 0;
     double oldsessionlength = 0;

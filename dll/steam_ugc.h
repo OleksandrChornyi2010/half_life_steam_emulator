@@ -159,9 +159,9 @@ SteamAPICall_t SendQueryUGCRequest( UGCQueryHandle_t handle )
 
 
 // Retrieve an individual result after receiving the callback for querying UGC
-bool GetQueryUGCResult( UGCQueryHandle_t handle, uint32 index, SteamUGCDetails_t *pDetails )
+bool GetQueryUGCResult( UGCQueryHandle_t handle, uint32 idx, SteamUGCDetails_t *pDetails )
 {
-    PRINT_DEBUG("Steam_UGC::GetQueryUGCResult %u\n", index);
+    PRINT_DEBUG("Steam_UGC::GetQueryUGCResult %u\n", idx);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     if (pDetails) {
         memset(pDetails, 0, sizeof(SteamUGCDetails_t));
@@ -173,36 +173,36 @@ bool GetQueryUGCResult( UGCQueryHandle_t handle, uint32 index, SteamUGCDetails_t
         return false;
     }
 
-    if (index >= request->results.size()) {
+    if (idx >= request->results.size()) {
         return false;
     }
 
     auto it = request->results.begin();
-    std::advance(it, index);
+    std::advance(it, idx);
     set_details(*it, pDetails);
 
     return true;
 }
 
-uint32 GetQueryUGCNumTags( UGCQueryHandle_t handle, uint32 index )
+uint32 GetQueryUGCNumTags( UGCQueryHandle_t handle, uint32 idx )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCNumTags\n");
     return 0;
 }
 
-bool GetQueryUGCTag( UGCQueryHandle_t handle, uint32 index, uint32 indexTag, STEAM_OUT_STRING_COUNT( cchValueSize ) char* pchValue, uint32 cchValueSize )
+bool GetQueryUGCTag( UGCQueryHandle_t handle, uint32 idx, uint32 indexTag, STEAM_OUT_STRING_COUNT( cchValueSize ) char* pchValue, uint32 cchValueSize )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCTag\n");
     return false;
 }
 
-bool GetQueryUGCTagDisplayName( UGCQueryHandle_t handle, uint32 index, uint32 indexTag, STEAM_OUT_STRING_COUNT( cchValueSize ) char* pchValue, uint32 cchValueSize )
+bool GetQueryUGCTagDisplayName( UGCQueryHandle_t handle, uint32 idx, uint32 indexTag, STEAM_OUT_STRING_COUNT( cchValueSize ) char* pchValue, uint32 cchValueSize )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCTagDisplayName\n");
     return false;
 }
 
-bool GetQueryUGCPreviewURL( UGCQueryHandle_t handle, uint32 index, STEAM_OUT_STRING_COUNT(cchURLSize) char *pchURL, uint32 cchURLSize )
+bool GetQueryUGCPreviewURL( UGCQueryHandle_t handle, uint32 idx, STEAM_OUT_STRING_COUNT(cchURLSize) char *pchURL, uint32 cchURLSize )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCPreviewURL\n");
     //TODO: escape simulator tries downloading this url and unsubscribes if it fails
@@ -210,71 +210,71 @@ bool GetQueryUGCPreviewURL( UGCQueryHandle_t handle, uint32 index, STEAM_OUT_STR
 }
 
 
-bool GetQueryUGCMetadata( UGCQueryHandle_t handle, uint32 index, STEAM_OUT_STRING_COUNT(cchMetadatasize) char *pchMetadata, uint32 cchMetadatasize )
+bool GetQueryUGCMetadata( UGCQueryHandle_t handle, uint32 idx, STEAM_OUT_STRING_COUNT(cchMetadatasize) char *pchMetadata, uint32 cchMetadatasize )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCMetadata\n");
     return false;
 }
 
 
-bool GetQueryUGCChildren( UGCQueryHandle_t handle, uint32 index, PublishedFileId_t* pvecPublishedFileID, uint32 cMaxEntries )
+bool GetQueryUGCChildren( UGCQueryHandle_t handle, uint32 idx, PublishedFileId_t* pvecPublishedFileID, uint32 cMaxEntries )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCChildren\n");
     return false;
 }
 
 
-bool GetQueryUGCStatistic( UGCQueryHandle_t handle, uint32 index, EItemStatistic eStatType, uint64 *pStatValue )
+bool GetQueryUGCStatistic( UGCQueryHandle_t handle, uint32 idx, EItemStatistic eStatType, uint64 *pStatValue )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCStatistic\n");
     return false;
 }
 
-bool GetQueryUGCStatistic( UGCQueryHandle_t handle, uint32 index, EItemStatistic eStatType, uint32 *pStatValue )
+bool GetQueryUGCStatistic( UGCQueryHandle_t handle, uint32 idx, EItemStatistic eStatType, uint32 *pStatValue )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCStatistic old\n");
     return false;
 }
 
-uint32 GetQueryUGCNumAdditionalPreviews( UGCQueryHandle_t handle, uint32 index )
+uint32 GetQueryUGCNumAdditionalPreviews( UGCQueryHandle_t handle, uint32 idx )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCNumAdditionalPreviews\n");
     return 0;
 }
 
 
-bool GetQueryUGCAdditionalPreview( UGCQueryHandle_t handle, uint32 index, uint32 previewIndex, STEAM_OUT_STRING_COUNT(cchURLSize) char *pchURLOrVideoID, uint32 cchURLSize, STEAM_OUT_STRING_COUNT(cchURLSize) char *pchOriginalFileName, uint32 cchOriginalFileNameSize, EItemPreviewType *pPreviewType )
+bool GetQueryUGCAdditionalPreview( UGCQueryHandle_t handle, uint32 idx, uint32 previewIndex, STEAM_OUT_STRING_COUNT(cchURLSize) char *pchURLOrVideoID, uint32 cchURLSize, STEAM_OUT_STRING_COUNT(cchURLSize) char *pchOriginalFileName, uint32 cchOriginalFileNameSize, EItemPreviewType *pPreviewType )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCAdditionalPreview\n");
     return false;
 }
 
-bool GetQueryUGCAdditionalPreview( UGCQueryHandle_t handle, uint32 index, uint32 previewIndex, char *pchURLOrVideoID, uint32 cchURLSize, bool *hz )
+bool GetQueryUGCAdditionalPreview( UGCQueryHandle_t handle, uint32 idx, uint32 previewIndex, char *pchURLOrVideoID, uint32 cchURLSize, bool *hz )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCAdditionalPreview old\n");
     return false;
 }
 
-uint32 GetQueryUGCNumKeyValueTags( UGCQueryHandle_t handle, uint32 index )
+uint32 GetQueryUGCNumKeyValueTags( UGCQueryHandle_t handle, uint32 idx )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCNumKeyValueTags\n");
     return 0;
 }
 
 
-bool GetQueryUGCKeyValueTag( UGCQueryHandle_t handle, uint32 index, uint32 keyValueTagIndex, STEAM_OUT_STRING_COUNT(cchKeySize) char *pchKey, uint32 cchKeySize, STEAM_OUT_STRING_COUNT(cchValueSize) char *pchValue, uint32 cchValueSize )
+bool GetQueryUGCKeyValueTag( UGCQueryHandle_t handle, uint32 idx, uint32 keyValueTagIndex, STEAM_OUT_STRING_COUNT(cchKeySize) char *pchKey, uint32 cchKeySize, STEAM_OUT_STRING_COUNT(cchValueSize) char *pchValue, uint32 cchValueSize )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCKeyValueTag\n");
     return false;
 }
 
-bool GetQueryUGCKeyValueTag( UGCQueryHandle_t handle, uint32 index, const char *pchKey, STEAM_OUT_STRING_COUNT(cchValueSize) char *pchValue, uint32 cchValueSize )
+bool GetQueryUGCKeyValueTag( UGCQueryHandle_t handle, uint32 idx, const char *pchKey, STEAM_OUT_STRING_COUNT(cchValueSize) char *pchValue, uint32 cchValueSize )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCKeyValueTag2\n");
     return false;
 }
 
-uint32 GetQueryUGCContentDescriptors( UGCQueryHandle_t handle, uint32 index, EUGCContentDescriptorID *pvecDescriptors, uint32 cMaxEntries )
+uint32 GetQueryUGCContentDescriptors( UGCQueryHandle_t handle, uint32 idx, EUGCContentDescriptorID *pvecDescriptors, uint32 cMaxEntries )
 {
     PRINT_DEBUG("Steam_UGC::GetQueryUGCContentDescriptors\n");
     return 0;
@@ -575,7 +575,7 @@ bool AddItemPreviewVideo( UGCUpdateHandle_t handle, const char *pszVideoID )
  //  add preview video for this item
 
 
-bool UpdateItemPreviewFile( UGCUpdateHandle_t handle, uint32 index, const char *pszPreviewFile )
+bool UpdateItemPreviewFile( UGCUpdateHandle_t handle, uint32 idx, const char *pszPreviewFile )
 {
     PRINT_DEBUG("Steam_UGC::UpdateItemPreviewFile\n");
     return false;
@@ -583,7 +583,7 @@ bool UpdateItemPreviewFile( UGCUpdateHandle_t handle, uint32 index, const char *
  //  updates an existing preview file for this item. pszPreviewFile points to local file, which must be under 1MB in size
 
 
-bool UpdateItemPreviewVideo( UGCUpdateHandle_t handle, uint32 index, const char *pszVideoID )
+bool UpdateItemPreviewVideo( UGCUpdateHandle_t handle, uint32 idx, const char *pszVideoID )
 {
     PRINT_DEBUG("Steam_UGC::UpdateItemPreviewVideo\n");
     return false;
@@ -591,22 +591,22 @@ bool UpdateItemPreviewVideo( UGCUpdateHandle_t handle, uint32 index, const char 
  //  updates an existing preview video for this item
 
 
-bool RemoveItemPreview( UGCUpdateHandle_t handle, uint32 index )
+bool RemoveItemPreview( UGCUpdateHandle_t handle, uint32 idx )
 {
-    PRINT_DEBUG("Steam_UGC::RemoveItemPreview %llu %u\n", handle, index);
+    PRINT_DEBUG("Steam_UGC::RemoveItemPreview %llu %u\n", handle, idx);
     return false;
 }
  // remove a preview by index starting at 0 (previews are sorted)
 
 bool AddContentDescriptor( UGCUpdateHandle_t handle, EUGCContentDescriptorID descid )
 {
-    PRINT_DEBUG("Steam_UGC::AddContentDescriptor %llu %u\n", handle, index);
+    PRINT_DEBUG("Steam_UGC::AddContentDescriptor %llu %u\n", handle, descid);
     return false;
 }
 
 bool RemoveContentDescriptor( UGCUpdateHandle_t handle, EUGCContentDescriptorID descid )
 {
-    PRINT_DEBUG("Steam_UGC::RemoveContentDescriptor %llu %u\n", handle, index);
+    PRINT_DEBUG("Steam_UGC::RemoveContentDescriptor %llu %u\n", handle, descid);
     return false;
 }
 
