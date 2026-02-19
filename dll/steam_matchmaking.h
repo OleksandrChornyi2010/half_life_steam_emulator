@@ -343,6 +343,7 @@ static Lobby_Member *get_lobby_member(Lobby *lobby, CSteamID user_id)
 int GetFavoriteGameCount()
 {
     PRINT_DEBUG("GetFavoriteGameCount\n");
+    std::cout << "GetFavoriteGameCount" << std::endl;
     return 0;
 }
 
@@ -355,6 +356,7 @@ int GetFavoriteGameCount()
 bool GetFavoriteGame( int iGame, AppId_t *pnAppID, uint32 *pnIP, uint16 *pnConnPort, uint16 *pnQueryPort, uint32 *punFlags, uint32 *pRTime32LastPlayedOnServer )
 {
     PRINT_DEBUG("GetFavoriteGame\n");
+    std::cout << "GetFavoriteGame___" << std::endl;
     return false;
 }
 
@@ -364,6 +366,7 @@ int AddFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQuery
 {
     PRINT_DEBUG("AddFavoriteGame %lu %lu %hu %hu %lu %lu\n", nAppID, nIP, nConnPort, nQueryPort, unFlags, rTime32LastPlayedOnServer);
     //TODO: what should this return?
+    std::cout << "AddFavoriteGame" << std::endl;
     return 0;
 }
 
@@ -372,6 +375,7 @@ int AddFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQuery
 bool RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags )
 {
     PRINT_DEBUG("RemoveFavoriteGame\n");
+    std::cout << "RemoveFavoriteGame" << std::endl;
     return false;
 }
 

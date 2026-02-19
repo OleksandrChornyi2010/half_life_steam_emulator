@@ -22,7 +22,6 @@ class HLDSQuery {
 private:
     int sock;
     struct sockaddr_in server_addr;
-    AppId_t appid;
 
     void drain_socket();
 
@@ -32,7 +31,7 @@ private:
     T read_num(uint8_t*& ptr, uint8_t* end);
 
 public:
-    HLDSQuery(const std::string& ip, uint16_t port, AppId_t appid);
+    HLDSQuery(const std::string& ip, uint16_t port);
 
     ~HLDSQuery();
 

@@ -272,6 +272,7 @@ static std::vector<struct File_Data> get_filenames_recursive(std::string base_pa
 
 #else
 std::string Local_Storage::data_path;
+uint32 Local_Storage::i_appid = 0; // TODO: Set to const DEFAULT_APPID
 /* recursive mkdir */
 static int mkdir_p(const char *dir, const mode_t mode) {
     char tmp[PATH_MAX_STRING_SIZE];
@@ -494,6 +495,8 @@ Local_Storage::Local_Storage(std::string save_directory)
 
 void Local_Storage::setAppId(uint32 appid)
 {
+    std::cout << "Set appid: " << appid << std::endl;
+    i_appid = appid;
     this->appid = std::to_string(appid) + PATH_SEPARATOR;
 }
 

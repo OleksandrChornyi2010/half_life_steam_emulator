@@ -19,7 +19,7 @@
 
 #include "HLDSQuery.h"
 #include "vdf_parser.h"
-
+#include <future>
 
 static void network_callback(void *object, Common_Message *msg)
 {
@@ -40,7 +40,6 @@ Steam_Matchmaking_Servers::Steam_Matchmaking_Servers(class Settings *settings, c
 HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type)
 {
     PRINT_DEBUG("%u %p, %i", iApp, pRequestServersResponse, (int)type);
-    std::cout << "App id: " << iApp << std::endl;
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     ++server_list_request;
     HServerListRequest id = (void *)server_list_request;
@@ -76,80 +75,63 @@ HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, IS
         file_size = file_size_(file_path);*/
         return id;
     } else if (type == eHistoryServer) {
-        std::thread worker(&Steam_Matchmaking_Servers::RefreshServersFromFile, this, "serverbrowser_hist.vdf", id, iApp, type, requests.size() - 1);
+        std::thread worker(&Steam_Matchmaking_Servers::RefreshServersFromFile, this, "serverbrowser_hist.vdf", id, type, requests.size() - 1);
         worker.detach();
         return id;
     }
     return id;
 }
 
-void Steam_Matchmaking_Servers::RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type, size_t request_index) {
+void Steam_Matchmaking_Servers::RefreshServersFromFile(std::string filePath, HServerListRequest id, EMatchMakingType type, size_t request_index) {
     std::vector<std::pair<std::string, int>> addresses = ParseFile(filePath);
 
+    // Vector to store futures for each parallel task
+    std::vector<std::future<void>> futures;
+
     for (auto& addr : addresses) {
-        if (request_index < requests.size() && requests[request_index].id == id) {
-            if (requests[request_index].cancelled) {
-                std::cout << "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&User canceled request by request_index: " << id << " new addr: " << addr.first << std::endl;
-                break;
-            }
-        }
-        Gameserver result;
-        Steam_Matchmaking_Servers_Gameserver g{};
-        // TODO: Get real server data
-        if (GetServerData(addr.first, addr.second, appid, &result)) { // TODO: Make multi threaded
+        // Checking if the request was cancelled before spawning a new thread
+        {
             std::lock_guard<std::recursive_mutex> lock(global_mutex);
-            std::cout << "addr.first: " << addr.first << std::endl;
-            auto itet_addr = inet_addr(addr.first.c_str());
-            std::cout << "itet_addr: " << itet_addr << std::endl; // Специально сделал опечатку в имени переменной
-            g.server.set_ip(itet_addr);
-            std::cout << "Pre-ip " << g.server.ip() << std::endl;
-            char buffer[INET_ADDRSTRLEN];
-            struct in_addr addr_in;
-            addr_in.s_addr = g.server.ip();
-
-            if (inet_ntop(AF_INET, &addr_in, buffer, INET_ADDRSTRLEN)) {
-                std::string normal_ip(buffer);
-                std::cout << "Post-IP: " << normal_ip << std::endl;
+            if (request_index < requests.size() && requests[request_index].id == id) {
+                if (requests[request_index].cancelled) {
+                    break;
+                }
             }
-            else {
-                std::cout << "Inet-ntop failed " << std::endl;
-            }
-            uint32_t ip_int = g.server.ip();
-
-            struct in_addr addr_try;
-            addr_try.s_addr = ip_int;
-            char* ip_string = inet_ntoa(addr_try);
-            std::cout << "Post-IP-Try-2: " << ip_string << std::endl;
-
-            g.server.set_port(addr.second);
-            g.server.set_query_port(addr.second);
-            //g.server.set_mod_dir("valve");
-            g.server.set_appid(appid); // TODO: AppID set needs to be done in HLDSQuery.get_info()
-            g.server.set_map_name("de_dust");
-            g.server.set_server_name(ip_string);
-            g.server.set_mod_dir("valve");
-            g.server.set_game_description("Half-Life");
-            g.server.set_max_player_count(32);
-            g.server.set_num_players(1);
-            g.server.set_version(1122);
-            g.server.set_id(85568397540602928);
-            g.server.set_password_protected(false);
-            g.server.set_secure(false);
-            g.type = type;
-            g.last_recv = std::chrono::high_resolution_clock::now();
-
-            gameservers.push_back(g);
         }
+
+        // Launching GetServerData in a separate thread
+        futures.push_back(std::async(std::launch::async, [this, addr, type]() {
+            Steam_Matchmaking_Servers_Gameserver g{};
+
+            // Heavy network operation happens here in parallel
+            if (FetchServerData(addr.first, addr.second, &g.server)) {
+                std::lock_guard<std::recursive_mutex> lock(global_mutex);
+
+                uint32_t network_ip = inet_addr(addr.first.c_str());
+                uint32_t host_ip = ntohl(network_ip);
+
+                g.server.set_ip(host_ip);
+                g.server.set_port(addr.second);
+                g.server.set_query_port(addr.second);
+                // g.server.set_appid(appid);
+                g.type = type;
+                g.last_recv = std::chrono::high_resolution_clock::now();
+
+                gameservers.push_back(g);
+                std::cout << "Added server: " << addr.first << ":" << addr.second << " appid: " << g.server.appid() << std::endl;
+            }
+        }));
     }
-    //std::lock_guard<std::recursive_mutex> lock(global_mutex);
+
+    // Wait for all threads to finish
+    for (auto& f : futures) {
+        f.get();
+    }
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
     if (request_index < requests.size() && requests[request_index].id == id) {
         requests[request_index].finished_pushing = true;
-        std::cout << "////////////////////////////////////Marking as complete by request_index: " << id << std::endl;
+        // std::cout << "////////////////////////////////Marking as complete by request_index: " << id << std::endl;
     }
-    else {
-        std::cout << "wrong id: " << id << "//////////////////////////////////////" << std::endl;
-    }
-
 }
 
 std::vector<std::pair<std::string, int>> Steam_Matchmaking_Servers::ParseFile(std::string filePath) {
@@ -166,13 +148,11 @@ std::vector<std::pair<std::string, int>> Steam_Matchmaking_Servers::ParseFile(st
                 std::cout << "History Server " << key << " data:" << std::endl;
                 //std::string serverName = value.values["name"];
                 std::string serverAddress = value.values["address"]; // TODO: Add hasValue check
-                std::cout << "SVaddr-0" << serverAddress << std::endl;
                 // Find the position of the colon
                 size_t colon_pos = serverAddress.find(':');
 
                 // If no colon is found, return the whole string as IP and 0 as port (or handle error)
                 if (colon_pos == std::string::npos) {
-                     std::cout << "SVaddr-1" << serverAddress << std::endl;
                      servers.push_back({serverAddress, 27015});
                 }
 
@@ -184,7 +164,6 @@ std::vector<std::pair<std::string, int>> Steam_Matchmaking_Servers::ParseFile(st
 
                 // Convert string port to integer
                 int port = std::stoi(port_str);
-                std::cout << "SVaddr-3+pt" << ip << " " << port << std::endl;
                 servers.push_back({ip, port});
             }
         }
@@ -192,11 +171,10 @@ std::vector<std::pair<std::string, int>> Steam_Matchmaking_Servers::ParseFile(st
     return servers;
 }
 
-bool Steam_Matchmaking_Servers::GetServerData(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data) // TODO: Rename me
+bool Steam_Matchmaking_Servers::FetchServerData(std::string ip, uint16_t port, Gameserver* out_data)
 {
-    HLDSQuery query(ip, port, appid);
-    query.get_info(out_data);
-    return true;
+    HLDSQuery query(ip, port);
+    return query.get_info(out_data);
 }
 
 // Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
@@ -224,7 +202,6 @@ HServerListRequest Steam_Matchmaking_Servers::RequestLANServerList( AppId_t iApp
     ++server_list_request;
     requests[requests.size() - 1].id = (void *)server_list_request;
     HServerListRequest id = requests[requests.size() - 1].id;
-    std::cout << "RLAn server list (id): " << id << std::endl;
     PRINT_DEBUG("request id: %p\n", id);
     return id;
 }
@@ -247,7 +224,6 @@ HServerListRequest Steam_Matchmaking_Servers::RequestHistoryServerList( AppId_t 
 {
     PRINT_DEBUG("RequestHistoryServerList\n");
     //TODO
-    //return RequestLANServerList(iApp, pRequestServersResponse);
     return RequestServerList(iApp, pRequestServersResponse, eHistoryServer);
 }
 
@@ -422,9 +398,9 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
     }
 
     server->m_NetAdr.Init(g->ip(), query_port, g->port());
-    std::cout << "server_details_ip_9876: " << g->ip() << " mp: " << g-> map_name() << " q-pt: " << query_port << " pt: " <<g->port() << std::endl;
-    server->m_nPing = 10; //TODO
-    server->m_bHadSuccessfulResponse = true;
+    std::cout << "server_details_ip_9876: " << g->ip() << " mp: " << g-> map_name() << " q-pt: " << query_port << " pt: " << g->port() << " ping: " << g->latency() << " had_response: " << g->had_successful_response() << std::endl;
+    server->m_nPing = g->latency();
+    server->m_bHadSuccessfulResponse = g->had_successful_response();
     server->m_bDoNotRefresh = false;
     strncpy(server->m_szGameDir, g->mod_dir().c_str(), k_cbMaxGameServerGameDir - 1);
     strncpy(server->m_szMap, g->map_name().c_str(), k_cbMaxGameServerMapName - 1);
@@ -440,7 +416,7 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
     server->m_nBotPlayers = g->bot_player_count();
     server->m_bPassword = g->password_protected();
     server->m_bSecure = g->secure();
-    server->m_ulTimeLastPlayed = 0;
+    server->m_ulTimeLastPlayed = 0; // TODO: Get real last time played
     server->m_nServerVersion = g->version();
     server->SetName(g->server_name().c_str());
     server->m_steamID = CSteamID((uint64)g->id());
@@ -450,30 +426,31 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
     server->m_szGameTags[k_cbMaxGameServerTags - 1] = 0;
 
     // Outputting all fields for debugging
-    // std::cout << "--- Gameserveritem_t Debug Output ---" << std::endl;
-    // std::cout << "Server Name: " << server->GetName() << std::endl;
-    // std::cout << "IP/Port (NetAdr): " << server->m_NetAdr.GetIP() << ":" << server->m_NetAdr.GetConnectionPort()
-    //           << " (Query: " << server->m_NetAdr.GetQueryPort() << ")" << std::endl;
-    // std::cout << "AppID: " << server->m_nAppID << std::endl;
-    // std::cout << "GameDir: " << server->m_szGameDir << std::endl;
-    // std::cout << "Map: " << server->m_szMap << std::endl;
-    // std::cout << "GameDescription: " << server->m_szGameDescription << std::endl;
-    // std::cout << "Players: " << (int)server->m_nPlayers << " / " << (int)server->m_nMaxPlayers
-    //           << " (Bots: " << (int)server->m_nBotPlayers << ")" << std::endl;
-    // std::cout << "Ping: " << server->m_nPing << std::endl;
-    // std::cout << "Password: " << (server->m_bPassword ? "Yes" : "No") << std::endl;
-    // std::cout << "Secure: " << (server->m_bSecure ? "Yes" : "No") << std::endl;
-    // std::cout << "HadSuccessfulResponse: " << (server->m_bHadSuccessfulResponse ? "True" : "False") << std::endl;
-    // std::cout << "DoNotRefresh: " << (server->m_bDoNotRefresh ? "True" : "False") << std::endl;
-    // std::cout << "Last Played: " << server->m_ulTimeLastPlayed << std::endl;
-    // std::cout << "Version: " << server->m_nServerVersion << std::endl;
-    // std::cout << "SteamID: " << server->m_steamID.ConvertToUint64() << std::endl;
-    // std::cout << "Tags: " << server->m_szGameTags << std::endl;
-    // std::cout << "-------------------------------------" << std::endl;
+    /*std::cout << "--- Gameserveritem_t Debug Output ---" << std::endl;
+    std::cout << "HadSuccessfulResponse: " << server->m_bHadSuccessfulResponse << std::endl;
+    std::cout << "Server Name: " << server->GetName() << std::endl;
+    std::cout << "IP/Port (NetAdr): " << server->m_NetAdr.GetIP() << ":" << server->m_NetAdr.GetConnectionPort()
+              << " (Query: " << server->m_NetAdr.GetQueryPort() << ")" << std::endl;
+    std::cout << "AppID: " << server->m_nAppID << std::endl;
+    std::cout << "GameDir: " << server->m_szGameDir << std::endl;
+    std::cout << "Map: " << server->m_szMap << std::endl;
+    std::cout << "GameDescription: " << server->m_szGameDescription << std::endl;
+    std::cout << "Players: " << (int)server->m_nPlayers << " / " << (int)server->m_nMaxPlayers
+              << " (Bots: " << (int)server->m_nBotPlayers << ")" << std::endl;
+    std::cout << "Ping: " << server->m_nPing << std::endl;
+    std::cout << "Password: " << (server->m_bPassword ? "Yes" : "No") << std::endl;
+    std::cout << "Secure: " << (server->m_bSecure ? "Yes" : "No") << std::endl;
+    std::cout << "HadSuccessfulResponse: " << (server->m_bHadSuccessfulResponse ? "True" : "False") << std::endl;
+    std::cout << "DoNotRefresh: " << (server->m_bDoNotRefresh ? "True" : "False") << std::endl;
+    std::cout << "Last Played: " << server->m_ulTimeLastPlayed << std::endl;
+    std::cout << "Version: " << server->m_nServerVersion << std::endl;
+    std::cout << "SteamID: " << server->m_steamID.ConvertToUint64() << std::endl;
+    std::cout << "Tags: " << server->m_szGameTags << std::endl;
+    std::cout << "-------------------------------------" << std::endl;*/
 }
 
 // Get details on a given server in the list, you can get the valid range of index
-// values by calling GetServerCount().  You will also receive index values in 
+// values by calling GetServerCount().  You will also receive index values in
 // ISteamMatchmakingServerListResponse::ServerResponded() callbacks
 gameserveritem_t *Steam_Matchmaking_Servers::GetServerDetails( HServerListRequest hRequest, int iServer )
 {
@@ -507,7 +484,7 @@ gameserveritem_t *Steam_Matchmaking_Servers::GetServerDetails( HServerListReques
 
 
 // Cancel a request which is operation on the given list type.  You should call this to cancel
-// any in-progress requests before destructing a callback object that may have been passed 
+// any in-progress requests before destructing a callback object that may have been passed
 // to one of the above list request calls.  Not doing so may result in a crash when a callback
 // occurs on the destructed object.
 // Canceling a query does not release the allocated request handle.
@@ -525,7 +502,7 @@ void Steam_Matchmaking_Servers::CancelQuery( HServerListRequest hRequest )
         ++r;
     }
 }
- 
+
 
 // Ping every server in your list again but don't update the list of servers
 // Query callback installed when the server list was requested will be used
@@ -536,15 +513,16 @@ void Steam_Matchmaking_Servers::RefreshQuery( HServerListRequest hRequest )
 {
     PRINT_DEBUG("RefreshQuery %p\n", hRequest);
 }
- 
+
 
 // Returns true if the list is currently refreshing its server list
 bool Steam_Matchmaking_Servers::IsRefreshing( HServerListRequest hRequest )
 {
     PRINT_DEBUG("IsRefreshing %p\n", hRequest);
+    std::cout << "IsRefreshing" << std::endl;
     return false;
 }
- 
+
 
 // How many servers in the given list, GetServerDetails above takes 0... GetServerCount() - 1
 int Steam_Matchmaking_Servers::GetServerCount( HServerListRequest hRequest )
@@ -552,14 +530,14 @@ int Steam_Matchmaking_Servers::GetServerCount( HServerListRequest hRequest )
     PRINT_DEBUG("GetServerCount %p\n", hRequest);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     int size = 0;
-    auto g = std::begin(requests);
-    while (g != std::end(requests)) {
-        if (g->id == hRequest) {
-            size = g->gameservers_filtered.size();
+    auto r = std::begin(requests);
+    while (r != std::end(requests)) {
+        if (r->id == hRequest) {
+            size = r->gameservers_filtered.size();
             break;
         }
 
-        ++g;
+        ++r;
     }
 
     return size;
@@ -572,7 +550,7 @@ void Steam_Matchmaking_Servers::RefreshServer( HServerListRequest hRequest, int 
     PRINT_DEBUG("RefreshServer %p\n", hRequest);
     //TODO
 }
- 
+
 static HServerQuery new_server_query()
 {
     static int a;
@@ -584,6 +562,35 @@ static HServerQuery new_server_query()
 //-----------------------------------------------------------------------------
 // Queries to individual servers directly via IP/Port
 //-----------------------------------------------------------------------------
+
+std::string Steam_Matchmaking_Servers::ip_to_string(uint32_t ip_host_order) {
+    struct in_addr addr;
+    // Convert from host to network order
+    addr.s_addr = htonl(ip_host_order);
+
+    char buffer[INET_ADDRSTRLEN];
+    if (inet_ntop(AF_INET, &addr, buffer, INET_ADDRSTRLEN)) {
+        return std::string(buffer);
+    }
+    return "0.0.0.0";
+}
+
+void Steam_Matchmaking_Servers::ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id ) {
+    std::string ip = ip_to_string(unIP);
+    std::cout << "Ping with ip: " << ip << " id: " << id << std::endl;
+    Gameserver server;
+    FetchServerData(ip, usPort, &server);
+    server.set_ip(unIP);
+    server.set_port(usPort);
+    server.set_query_port(usPort);
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    for (auto &r : direct_ip_requests) {
+        if (r.id == id) {
+            server_details(&server, &r.ping_server_info);
+            r.processed = true;
+        }
+    }
+}
 
 // Request updated ping time and other details from a single server
 HServerQuery Steam_Matchmaking_Servers::PingServer( uint32 unIP, uint16 usPort, ISteamMatchmakingPingResponse *pRequestServersResponse )
@@ -597,6 +604,8 @@ HServerQuery Steam_Matchmaking_Servers::PingServer( uint32 unIP, uint16 usPort, 
     r.port = usPort;
     r.ping_response = pRequestServersResponse;
     r.created = std::chrono::high_resolution_clock::now();
+    std::thread worker(&Steam_Matchmaking_Servers::ProcessPingRequest, this, unIP, usPort, r.id);
+    worker.detach();
     direct_ip_requests.push_back(r);
     return r.id;
 }
@@ -613,6 +622,7 @@ HServerQuery Steam_Matchmaking_Servers::PlayerDetails( uint32 unIP, uint16 usPor
     r.port = usPort;
     r.players_response = pRequestServersResponse;
     r.created = std::chrono::high_resolution_clock::now();
+    return r.id;
     direct_ip_requests.push_back(r);
     return r.id;
 }
@@ -636,7 +646,7 @@ HServerQuery Steam_Matchmaking_Servers::ServerRules( uint32 unIP, uint16 usPort,
 
 
 // Cancel an outstanding Ping/Players/Rules query from above.  You should call this to cancel
-// any in-progress requests before destructing a callback object that may have been passed 
+// any in-progress requests before destructing a callback object that may have been passed
 // to one of the above calls to avoid crashing when callbacks occur.
 void Steam_Matchmaking_Servers::CancelServerQuery( HServerQuery hServerQuery )
 {
@@ -664,6 +674,37 @@ void Steam_Matchmaking_Servers::ReadInput() {
     }
 }
 
+gameserveritem_t FakeData() {
+    gameserveritem_t server;
+
+    server.m_NetAdr.Init(37455661, 27012, 27012);
+    server.m_nPing = 34;
+    server.m_bHadSuccessfulResponse = true;
+    server.m_bDoNotRefresh = false;
+    std::string md = "valve";
+    std::string mp = "de_dust";
+    std::string gd = "123123123";
+    std::string sn = "Half-Life";
+    strncpy(server.m_szGameDir, md.c_str(), k_cbMaxGameServerGameDir - 1);
+    strncpy(server.m_szMap, mp.c_str(), k_cbMaxGameServerMapName - 1);
+    strncpy(server.m_szGameDescription, gd.c_str(), k_cbMaxGameServerGameDescription - 1);
+
+    server.m_szGameDir[k_cbMaxGameServerGameDir - 1] = 0;
+    server.m_szMap[k_cbMaxGameServerMapName - 1] = 0;
+    server.m_szGameDescription[k_cbMaxGameServerGameDescription - 1] = 0;
+    server.m_nAppID = 70;
+    server.m_nPlayers = 12;
+    server.m_nMaxPlayers = 32;
+    server.m_nBotPlayers = 0;
+    server.m_bPassword = false;
+    server.m_bSecure = false;
+    server.m_ulTimeLastPlayed = 0; // TODO: Get real last time played
+    server.m_nServerVersion = 84;
+    server.SetName(sn.c_str());
+    server.m_steamID = CSteamID((uint64)0);
+    return server;
+}
+
 void Steam_Matchmaking_Servers::RunCallbacks()
 {
     PRINT_DEBUG("Steam_Matchmaking_Servers::RunCallbacks\n");
@@ -689,12 +730,12 @@ void Steam_Matchmaking_Servers::RunCallbacks()
         if (r.callbacks) {
             auto g = std::begin(gameservers);
             while (g != std::end(gameservers)) {
-                if (check_timedout(g->last_recv, SERVER_TIMEOUT)) {
+                if (check_timedout(g->last_recv, SERVER_TIMEOUT)) { // TODO: Check if such case can be met
                     g = gameservers.erase(g);
                     PRINT_DEBUG("SERVER TIMEOUT\n");
                     std::cout << "Time out" << std::endl;
                 } else {
-                    if (g->server.appid() == r.appid) {
+                    if (g->type == r.type) {
                         /*std::cout << "GS: [" << std::endl;
                         for (const auto& item : r.gameservers_filtered) {
                             std::cout << item.server.ip() << " ";
@@ -712,7 +753,6 @@ void Steam_Matchmaking_Servers::RunCallbacks()
                         r.callbacks->ServerResponded(r.id, r.i);
 
                         g = gameservers.erase(g);
-                        std::cout << "Next gam: " << g->server.ip() << std::endl;
                         ++r.i;
                     } else {
                         ++g;
@@ -721,83 +761,56 @@ void Steam_Matchmaking_Servers::RunCallbacks()
             }
         }
         if (r.finished_pushing) {
-            r.completed = true;
+            r.completed = true; // TODO: Refactor bool logic
         }
-
-        /*r.gameservers_filtered.clear();
-        for (auto &g : gameservers) {
-            PRINT_DEBUG("game_server_check %u %u\n", g.server.appid(), r.appid);
-            if (g.server.appid() == r.appid) {
-                PRINT_DEBUG("REQUESTS server found\n");
-                r.gameservers_filtered.push_back(g);
-                std::cout << "Pushing back server: " << g.server.ip() << " Type: " << g.type << std::endl;
-            }
-            else {
-                std::cout << "Wrong appid: " << g.server.appid() << std::endl;
-            }
-        }*/
     }
-
-    /*std::vector <struct Steam_Matchmaking_Request> requests_temp(requests);
-    PRINT_DEBUG("REQUESTS_TEMP %zu\n", requests_temp.size());
-    for (auto &r : requests) {
-        r.completed = true;
-    }
-
-    for (auto &r : requests_temp) {
-        if (r.cancelled || r.completed) continue;
-        int i = 0;
-        if (!r.gameservers_filtered.empty()) {
-            i = r.gameservers_filtered.size() - 1;
-            std::cout << "Last index: " << i << std::endl;
-        }
-        if (r.callbacks) {
-            for (auto &g : r.gameservers_filtered) {
-                PRINT_DEBUG("REQUESTS server responded cb %p\n", r.id);
-                r.callbacks->ServerResponded(r.id, i);
-                std::cout << "Responded" << std::endl;
-                // ReadInput();
-                // ReadInput();
-                ++i;
-            }
-
-            if (i) {
-                r.callbacks->RefreshComplete(r.id, eServerResponded);
-                std::cout << "Refresh complete (responded)" << std::endl;
-            } else {
-                r.callbacks->RefreshComplete(r.id, eNoServersListedOnMasterServer);
-            }
-        }
-
-        if (r.old_callbacks) {
-            for (auto &g : r.gameservers_filtered) {
-                PRINT_DEBUG("old REQUESTS server responded cb %p\n", r.id);
-                r.old_callbacks->ServerResponded(i);
-                ++i;
-            }
-
-            if (i) {
-                r.old_callbacks->RefreshComplete(eServerResponded);
-            } else {
-                r.old_callbacks->RefreshComplete(eNoServersListedOnMasterServer);
-            }
-        }
-    }*/
     // TODO: Review direct ip requests processing
-    std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests_temp;
+    //std::cout << "Iter" << std::endl;
     auto dip = std::begin(direct_ip_requests);
     while (dip != std::end(direct_ip_requests)) {
-        if (check_timedout(dip->created, DIRECT_IP_DELAY)) {
-            direct_ip_requests_temp.push_back(*dip);
+        if (check_timedout(dip->created, DIRECT_IP_DELAY) && !dip->processed) { // TODO: Check if such case can be met
             dip = direct_ip_requests.erase(dip);
+            std::cout << "DIP timeout" << std::endl;
         } else {
-            ++dip;
+            if (dip->processed) {
+                if (dip->ping_response) {
+                    if (dip->ping_server_info.m_bHadSuccessfulResponse) {
+                        dip->ping_response->ServerResponded(dip->ping_server_info);
+                        std::cout << "Responded" << std::endl;
+                    }
+                    else {
+                        dip->ping_response->ServerFailedToRespond();
+                        std::cout << "Failed to respond" << std::endl;
+                    }
+                    dip = direct_ip_requests.erase(dip);
+                }
+            }
+            else {
+                std::cout << "Not processed or not responded" << std::endl;
+                ++dip;
+            }
         }
     }
+    /*for (auto &r : direct_ip_requests) {
 
-    for (auto &r : direct_ip_requests_temp) {
         PRINT_DEBUG("dip request: %lu:%hu\n", r.ip, r.port);
-        for (auto &g : gameservers) {
+        if (r.processed) continue;
+
+        if (r.ping_response && r.processed == false) {
+            if (r.ping_server_info.m_bHadSuccessfulResponse) {
+                r.ping_response->ServerResponded(r.ping_server_info);
+                std::cout << "*****************************Responded" << std::endl;
+            }
+            else {
+                r.ping_response->ServerFailedToRespond();
+                std::cout << "*****************************Failed to respond" << std::endl;
+            }
+            std::cout << "%%%%%%%%%% POST info: " << std::endl;
+            std::cout << "Ping " << r.ping_server_info.m_nPing << std::endl;
+            std::cout << "Name " << r.ping_server_info.GetName() << std::endl;
+            r.processed = true; // TODO: Check if saving request after answering is needed
+        }*/
+        /*for (auto &g : gameservers) {
             PRINT_DEBUG("server: %lu:%hu\n", g.server.ip(), g.server.query_port());
             uint16 query_port = g.server.query_port();
             if (query_port == 0xFFFF) {
@@ -827,17 +840,16 @@ void Steam_Matchmaking_Servers::RunCallbacks()
                 }
                 //TODO: players response
             }
-        }
+        }*/
 
-        if (r.rules_response) r.rules_response->RulesRefreshComplete();
+        /*if (r.rules_response) r.rules_response->RulesRefreshComplete();
         //TODO: player response
         if (r.players_response) r.players_response->PlayersRefreshComplete();
-        if (r.ping_response) r.ping_response->ServerFailedToRespond();
-    }
+        if (r.ping_response) r.ping_response->ServerFailedToRespond();*/
+    // }
 }
 
-void Steam_Matchmaking_Servers::Callback(Common_Message *msg)
-{
+void Steam_Matchmaking_Servers::Callback(Common_Message *msg) {
     if (msg->has_gameserver()) {
         PRINT_DEBUG("got SERVER %llu, offline:%u\n", msg->gameserver().id(), msg->gameserver().offline());
         if (msg->gameserver().offline()) {
@@ -853,7 +865,6 @@ void Steam_Matchmaking_Servers::Callback(Common_Message *msg)
                     g.last_recv = std::chrono::high_resolution_clock::now();
                     g.server = msg->gameserver();
                     g.server.set_ip(msg->source_ip());
-                    std::cout << "LAn msg source ip: " << msg->source_ip() << " msg-src-pt: " << msg->source_port() << " q-pt: " << g.server.query_port() << " pt: " << g.server.port() << std::endl;
                     g.type = eLANServer;
                     already = true;
                 }

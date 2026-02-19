@@ -56,6 +56,7 @@ private:
     std::string save_directory;
     std::string appid;
 public:
+    static uint32 i_appid;
     static std::string get_program_path();
     static std::string get_game_settings_path();
     static std::string get_user_appdata_path();

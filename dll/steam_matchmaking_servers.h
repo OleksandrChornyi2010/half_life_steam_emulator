@@ -18,17 +18,22 @@
 #include "base.h"
 
 #define SERVER_TIMEOUT 10.0
-#define DIRECT_IP_DELAY 0.05
+#define DIRECT_IP_DELAY 10.0
 
 struct Steam_Matchmaking_Servers_Direct_IP_Request {
 	HServerQuery id;
 	uint32 ip;
 	uint16 port;
+	bool processed = false;
+	bool respondetd = false;
 
 	std::chrono::high_resolution_clock::time_point created;
 	ISteamMatchmakingRulesResponse *rules_response = NULL;
+
 	ISteamMatchmakingPlayersResponse *players_response = NULL;
+	
 	ISteamMatchmakingPingResponse *ping_response = NULL;
+	gameserveritem_t ping_server_info;
 };
 
 struct Steam_Matchmaking_Servers_Gameserver {
@@ -59,9 +64,11 @@ public ISteamMatchmakingServers001
     std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
 	int server_list_request = 0;
 	void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
-	bool GetServerData(std::string ip, uint16_t port, AppId_t appid, Gameserver* out_data);
-	void RefreshServersFromFile(std::string filePath, HServerListRequest id, AppId_t appid, EMatchMakingType type, size_t request_index);
+	bool FetchServerData(std::string ip, uint16_t port, Gameserver* out_data);
+	void RefreshServersFromFile(std::string filePath, HServerListRequest id, EMatchMakingType type, size_t request_index);
 	void ReadInput();
+	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
+	std::string ip_to_string(uint32_t ip_host_order);
 	std::vector<std::pair<std::string, int>> ParseFile(std::string);
 
 public:
@@ -163,7 +170,7 @@ public:
 	// ISteamMatchmakingServerListResponse::ServerResponded() callbacks
 	gameserveritem_t *GetServerDetails( HServerListRequest hRequest, int iServer ); 
 
-	// Cancel an request which is operation on the given list type.  You should call this to cancel
+	// Cancel a request which is operation on the given list type.  You should call this to cancel
 	// any in-progress requests before destructing a callback object that may have been passed 
 	// to one of the above list request calls.  Not doing so may result in a crash when a callback
 	// occurs on the destructed object.

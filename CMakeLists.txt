@@ -55,7 +55,37 @@ if(UNIX AND NOT APPLE)
 endif()
 # ----------------------------------------------
 # Generate the .h and .cxx files for dll/net.proto
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS dll/net.proto)
+
+set(PROTO_INPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/dll/net.proto")
+set(PROTO_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}")
+set(DESTINATION_DIR "${CMAKE_CURRENT_SOURCE_DIR}/dll")
+
+message(STATUS "Force generating Protobuf files in ${PROTO_OUTPUT_DIR}...")
+execute_process(
+		COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
+		--cpp_out=${PROTO_OUTPUT_DIR}
+		-I=${CMAKE_CURRENT_SOURCE_DIR}/dll
+		${PROTO_INPUT_FILE}
+		RESULT_VARIABLE PROTOC_RESULT
+)
+
+if(NOT PROTOC_RESULT EQUAL 0)
+	message(FATAL_ERROR "Failed to generate net.pb.cc/h using protoc!")
+endif()
+
+message(STATUS "Copying generated files to ${DESTINATION_DIR}...")
+execute_process(
+		COMMAND ${CMAKE_COMMAND} -E copy
+		"${PROTO_OUTPUT_DIR}/net.pb.cc"
+		"${PROTO_OUTPUT_DIR}/net.pb.h"
+		"${DESTINATION_DIR}"
+)
+
+set(PROTO_SRCS "${PROTO_OUTPUT_DIR}/net.pb.cc")
+set(PROTO_HDRS "${PROTO_OUTPUT_DIR}/net.pb.h")
+
+# We are now generating net.pb.cc/h files within reloading CMake project
+# protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS dll/net.proto)
 
 # Print path to generated files
 message(STATUS "PROTO_SRCS = ${PROTO_SRCS}")

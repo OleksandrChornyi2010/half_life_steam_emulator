@@ -29,9 +29,8 @@ T HLDSQuery::read_num(uint8_t*& ptr, uint8_t* end) {
     return val;
 }
 
-HLDSQuery::HLDSQuery(const std::string& ip, uint16_t port, AppId_t id) {
+HLDSQuery::HLDSQuery(const std::string& ip, uint16_t port) {
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    appid = id;
     struct timeval tv;
     tv.tv_sec = 1;
     tv.tv_usec = 0;
@@ -49,7 +48,7 @@ ssize_t HLDSQuery::send_and_receive(const std::vector<uint8_t>& request, uint8_t
     return recvfrom(sock, buffer, buf_size, 0, nullptr, nullptr);
 }
 
-void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_data) {
+void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_data) { // TODO: Make getting a reference, not a pointer
     uint8_t* ptr = &buffer[4];
     uint8_t* end = buffer + res;
     uint8_t header = read_num<uint8_t>(ptr, end);
@@ -128,8 +127,9 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
         out_data->set_version(prot_ver);
         out_data->set_password_protected(visibility);
         out_data->set_secure(vac);
+        out_data->set_game_description(game);
         out_data->set_bot_player_count(bots);
-        // TODO: Is appid set needed?
+        out_data->set_appid(Local_Storage::i_appid);
     }
     else if (header == 0x49) { // Source
         std::cout << "Protocol: Source (Modern)" << std::endl;
@@ -182,7 +182,7 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
         out_data->set_version(prot_ver);
         out_data->set_password_protected(visibility);
         out_data->set_secure(vac);
-        out_data->set_bot_player_count(bots);
+        out_data->set_game_description(game);
         out_data->set_appid(app_id);
     } else {
         std::cout << "Unknown header type." << std::endl;
@@ -190,21 +190,28 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
 }
 
 bool HLDSQuery::get_info(Gameserver* out_data) {
-    drain_socket();
+    drain_socket(); // TODO: Check if draining socket needed
 
     // A2S_INFO request
     std::vector<uint8_t> req = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
 
     // Send request once
+    auto start_time = std::chrono::high_resolution_clock::now();
     sendto(sock, req.data(), req.size(), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
 
     uint8_t buffer[2048];
-
     // Try to read first packet (GoldSrc)
     ssize_t goldsrc_response = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
-
+    auto end_time = std::chrono::high_resolution_clock::now();
     // Try to read second response (Source)
     ssize_t source_response = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
+
+    if (source_response > 0) {
+        end_time = std::chrono::high_resolution_clock::now();
+    }
+
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    uint32_t ping = static_cast<uint32_t>(duration.count());
 
     if (source_response > 5) { // Prioritize source response
         parse_info_buffer(buffer, source_response, out_data);
@@ -215,8 +222,11 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
     }
     else {
         std::cout << "No response from server." << std::endl;
+        out_data->set_had_successful_response(false);
         return false;
     }
+    out_data->set_latency(ping);
+    out_data->set_had_successful_response(true);
     return true;
 }
 
