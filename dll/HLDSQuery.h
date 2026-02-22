@@ -39,7 +39,7 @@ public:
 
     bool get_info(Gameserver* out_data);
 
-    void get_players();
+    void get_players(PlayerServerResult *result);
 
     void get_rules();
 

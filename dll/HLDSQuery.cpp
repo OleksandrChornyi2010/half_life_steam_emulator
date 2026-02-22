@@ -230,15 +230,12 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
     return true;
 }
 
-void HLDSQuery::get_players() {
+void HLDSQuery::get_players(PlayerServerResult *result) {
+    if (!result) return;
     uint8_t buffer[8192];
     drain_socket();
     ssize_t res = query_with_challenge(0x55, buffer, sizeof(buffer));
-
-    /*while (res > 5 && (buffer[4] == 0x49 || buffer[4] == 0x6D)) {
-        res = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
-    }*/
-
+    
     if (res <= 5 || buffer[4] != 0x44) {
         std::cout << "Players: Failed (Header 0x" << std::hex << (int)buffer[4] << std::dec << ")" << std::endl;
         return;
@@ -254,9 +251,12 @@ void HLDSQuery::get_players() {
         std::string name = read_string(ptr, end);
         int32_t score = read_num<int32_t>(ptr, end);
         float time = read_num<float>(ptr, end);
+
+        result->players.push_back({name, score, time});
         std::cout << std::setw(2) << i << ". " << std::setw(20) << (name.empty() ? "-" : name)
                   << " | Frags: " << std::setw(3) << score << " | Time: " << (int)time << "s" << std::endl;
     }
+    result->finished = true;
 }
 
 void HLDSQuery::get_rules() {

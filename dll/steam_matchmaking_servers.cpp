@@ -576,6 +576,8 @@ std::string Steam_Matchmaking_Servers::ip_to_string(uint32_t ip_host_order) {
 }
 
 void Steam_Matchmaking_Servers::ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id ) {
+    std::thread::id this_id = std::this_thread::get_id();
+    std::cout << "Thread ID ProcessPing: " << this_id << std::endl;
     std::string ip = ip_to_string(unIP);
     std::cout << "Ping with ip: " << ip << " id: " << id << std::endl;
     Gameserver server;
@@ -598,16 +600,31 @@ HServerQuery Steam_Matchmaking_Servers::PingServer( uint32 unIP, uint16 usPort, 
     std::cout << "PingServer " << unIP << " pt " << usPort << std::endl;
     PRINT_DEBUG("PingServer %hhu.%hhu.%hhu.%hhu:%hu\n", ((unsigned char *)&unIP)[3], ((unsigned char *)&unIP)[2], ((unsigned char *)&unIP)[1], ((unsigned char *)&unIP)[0], usPort);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    std::thread::id this_id = std::this_thread::get_id();
+    std::cout << "Thread ID PingServer: " << this_id << std::endl;
     Steam_Matchmaking_Servers_Direct_IP_Request r;
     r.id = new_server_query();
     r.ip = unIP;
     r.port = usPort;
     r.ping_response = pRequestServersResponse;
     r.created = std::chrono::high_resolution_clock::now();
+    direct_ip_requests.push_back(r);
     std::thread worker(&Steam_Matchmaking_Servers::ProcessPingRequest, this, unIP, usPort, r.id);
     worker.detach();
-    direct_ip_requests.push_back(r);
+    std::cout << "Pushed r: " << r.id << std::endl;
     return r.id;
+}
+
+void Steam_Matchmaking_Servers::ProcessPlayerRequest (HServerQuery id, uint32 unIP, uint16 usPort) {
+    std::string ip = ip_to_string(unIP);
+    HLDSQuery query(ip, usPort);
+
+    for (auto &r : direct_ip_requests) {
+        if (r.id == id) {
+            query.get_players(&r.player_server_info);
+            r.processed = true;
+        }
+    }
 }
 
 // Request the list of players currently playing on a server
@@ -615,15 +632,23 @@ HServerQuery Steam_Matchmaking_Servers::PlayerDetails( uint32 unIP, uint16 usPor
 {
     std::cout << "PlayerDetails " << unIP << " pt " << usPort << std::endl;
     PRINT_DEBUG("PlayerDetails %hhu.%hhu.%hhu.%hhu:%hu\n", ((unsigned char *)&unIP)[3], ((unsigned char *)&unIP)[2], ((unsigned char *)&unIP)[1], ((unsigned char *)&unIP)[0], usPort);
-    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    std::thread::id this_id = std::this_thread::get_id();
+    std::cout << "Thread ID PlayerDetails: " << this_id << std::endl;
     Steam_Matchmaking_Servers_Direct_IP_Request r;
     r.id = new_server_query();
     r.ip = unIP;
     r.port = usPort;
     r.players_response = pRequestServersResponse;
     r.created = std::chrono::high_resolution_clock::now();
-    return r.id;
-    direct_ip_requests.push_back(r);
+    std::thread worker ([this, r, unIP, usPort]() {
+        std::thread::id this_id = std::this_thread::get_id();
+        std::cout << "Thread ID PlayerDetails-Inner: " << this_id << std::endl;
+        std::lock_guard<std::recursive_mutex> lock(global_mutex);
+        direct_ip_requests.push_back(r);
+        std::cout << "Pushed r: " << r.id << std::endl;
+        ProcessPlayerRequest(r.id, unIP, usPort);
+    });
+    worker.detach();
     return r.id;
 }
 
@@ -768,25 +793,36 @@ void Steam_Matchmaking_Servers::RunCallbacks()
     //std::cout << "Iter" << std::endl;
     auto dip = std::begin(direct_ip_requests);
     while (dip != std::end(direct_ip_requests)) {
-        if (check_timedout(dip->created, DIRECT_IP_DELAY) && !dip->processed) { // TODO: Check if such case can be met
+        if (!dip->processed && check_timedout(dip->created, DIRECT_IP_DELAY)) { // TODO: Check if such case can be met
             dip = direct_ip_requests.erase(dip);
             std::cout << "DIP timeout" << std::endl;
         } else {
             if (dip->processed) {
                 if (dip->ping_response) {
                     if (dip->ping_server_info.m_bHadSuccessfulResponse) {
+
                         dip->ping_response->ServerResponded(dip->ping_server_info);
-                        std::cout << "Responded" << std::endl;
                     }
                     else {
                         dip->ping_response->ServerFailedToRespond();
-                        std::cout << "Failed to respond" << std::endl;
+
+                    }
+                    dip = direct_ip_requests.erase(dip);
+                }
+                if (dip->players_response) {
+                    if (dip->player_server_info.finished) {
+                        for (auto &player_info : dip->player_server_info.players) {
+                            dip->players_response->AddPlayerToList(player_info.name.c_str(), player_info.score, player_info.time);
+                        }
+                        dip->players_response->PlayersRefreshComplete();
+                    }
+                    else {
+                        dip->players_response->PlayersFailedToRespond();
                     }
                     dip = direct_ip_requests.erase(dip);
                 }
             }
             else {
-                std::cout << "Not processed or not responded" << std::endl;
                 ++dip;
             }
         }

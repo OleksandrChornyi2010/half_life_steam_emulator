@@ -352,6 +352,16 @@ public:
 	virtual void PlayersRefreshComplete() = 0;
 };
 
+struct PlayerServerData {
+	std::string name;
+	int score;
+	float time;
+};
+
+struct PlayerServerResult {
+	std::vector<PlayerServerData> players;
+	bool finished = false;
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: Callback interface for receiving responses after requesting rules

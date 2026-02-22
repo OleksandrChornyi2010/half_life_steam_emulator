@@ -25,12 +25,12 @@ struct Steam_Matchmaking_Servers_Direct_IP_Request {
 	uint32 ip;
 	uint16 port;
 	bool processed = false;
-	bool respondetd = false;
 
 	std::chrono::high_resolution_clock::time_point created;
 	ISteamMatchmakingRulesResponse *rules_response = NULL;
 
 	ISteamMatchmakingPlayersResponse *players_response = NULL;
+	PlayerServerResult player_server_info;
 	
 	ISteamMatchmakingPingResponse *ping_response = NULL;
 	gameserveritem_t ping_server_info;
@@ -59,6 +59,7 @@ public ISteamMatchmakingServers001
     class Settings *settings;
     class Networking *network;
 
+
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers;
     std::vector <struct Steam_Matchmaking_Request> requests;
     std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
@@ -68,6 +69,7 @@ public ISteamMatchmakingServers001
 	void RefreshServersFromFile(std::string filePath, HServerListRequest id, EMatchMakingType type, size_t request_index);
 	void ReadInput();
 	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
+	void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
 	std::string ip_to_string(uint32_t ip_host_order);
 	std::vector<std::pair<std::string, int>> ParseFile(std::string);
 
