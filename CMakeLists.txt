@@ -163,6 +163,7 @@ add_library(${LIB_STEAM_API}
   ${PROTO_HDRS}
 		dll/vdf_parser.cpp
 		dll/vdf_parser.h
+		dll/steam_matchmaking.cpp
 )
 
 add_custom_command(TARGET ${LIB_STEAM_API}

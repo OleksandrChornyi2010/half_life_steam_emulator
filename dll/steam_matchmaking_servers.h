@@ -77,11 +77,14 @@ public ISteamMatchmakingServers001
 	void ReadInput();
 	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
 	void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
+	void ProcessSingleServer(ServerItem server, EMatchMakingType type);
 	std::string ip_to_string(uint32_t ip_host_order);
-	void ParseFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
+
+    void ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
 
 public:
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
+
 	HServerListRequest RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type);
 
 	// Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
