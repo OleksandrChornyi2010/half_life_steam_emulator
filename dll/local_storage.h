@@ -51,6 +51,7 @@ public:
     static constexpr auto user_data_storage        = "local";
     static constexpr auto screenshots_folder       = "screenshots";
     static constexpr auto game_settings_folder     = "steam_settings";
+    static constexpr auto historyFileName = "serverbrowser_hist.vdf";
 
 private:
     std::string save_directory;

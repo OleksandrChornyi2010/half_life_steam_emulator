@@ -344,7 +344,7 @@ int GetFavoriteGameCount()
 {
     PRINT_DEBUG("GetFavoriteGameCount\n");
     std::cout << "GetFavoriteGameCount" << std::endl;
-    return 0;
+    return 2;
 }
 
 

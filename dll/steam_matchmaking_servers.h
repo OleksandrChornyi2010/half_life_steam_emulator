@@ -52,6 +52,11 @@ struct Steam_Matchmaking_Request {
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
 	EMatchMakingType type{};
 };
+struct ServerItem {
+	std::string ip;
+	int port;
+	u_int32_t last_played;
+};
 
 class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
 public ISteamMatchmakingServers001
@@ -59,6 +64,8 @@ public ISteamMatchmakingServers001
     class Settings *settings;
     class Networking *network;
 
+	std::vector<ServerItem> history_servers;
+	std::vector<ServerItem> favorite_servers;
 
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers;
     std::vector <struct Steam_Matchmaking_Request> requests;
@@ -66,12 +73,12 @@ public ISteamMatchmakingServers001
 	int server_list_request = 0;
 	void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
 	bool FetchServerData(std::string ip, uint16_t port, Gameserver* out_data);
-	void RefreshServersFromFile(std::string filePath, HServerListRequest id, EMatchMakingType type, size_t request_index);
+	void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type);
 	void ReadInput();
 	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
 	void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
 	std::string ip_to_string(uint32_t ip_host_order);
-	std::vector<std::pair<std::string, int>> ParseFile(std::string);
+	void ParseFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
 
 public:
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
