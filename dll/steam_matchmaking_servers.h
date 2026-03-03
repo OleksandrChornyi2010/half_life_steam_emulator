@@ -38,6 +38,8 @@ struct Steam_Matchmaking_Servers_Direct_IP_Request {
 
 struct Steam_Matchmaking_Servers_Gameserver {
     Gameserver server;
+	bool single_server_refresh = false;
+	int list_position = 0;
     std::chrono::high_resolution_clock::time_point last_recv;
 	EMatchMakingType type{};
 };
@@ -47,7 +49,7 @@ struct Steam_Matchmaking_Request {
     HServerListRequest id;
     ISteamMatchmakingServerListResponse *callbacks;
 	ISteamMatchmakingServerListResponse001 *old_callbacks;
-    bool completed, cancelled, released, finished_pushing, responded;
+    bool completed, cancelled, released, finished_pushing, responded, dont_answer;  // TODO: released is not needed anymore
 	int i = 0;
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
 	EMatchMakingType type{};
@@ -75,6 +77,7 @@ public ISteamMatchmakingServers001
 	bool FetchServerData(std::string ip, uint16_t port, Gameserver* out_data);
 	void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type);
 	void ReadInput();
+	void reactivate_request(Steam_Matchmaking_Request &r);
 	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
 	void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
 	void ProcessSingleServer(ServerItem server, EMatchMakingType type);
@@ -201,12 +204,14 @@ public:
 	bool IsRefreshing( HServerListRequest hRequest ); 
 
 	// How many servers in the given list, GetServerDetails above takes 0... GetServerCount() - 1
-	int GetServerCount( HServerListRequest hRequest ); 
+	int GetServerCount( HServerListRequest hRequest );
 
 	// Refresh a single server inside of a query (rather than all the servers )
-	void RefreshServer( HServerListRequest hRequest, int iServer ); 
+	void RefreshServer( HServerListRequest hRequest, int iServer );
 
-	// Get details on a given server in the list, you can get the valid range of index
+    void RefreshSingleServer(Steam_Matchmaking_Servers_Gameserver &gs, int iServer);
+
+    // Get details on a given server in the list, you can get the valid range of index
 	// values by calling GetServerCount().  You will also receive index values in 
 	// ISteamMatchmakingServerListResponse::ServerResponded() callbacks
 	gameserveritem_t *GetServerDetails( EMatchMakingType eType, int iServer ) { return GetServerDetails((HServerListRequest) eType , iServer ); }

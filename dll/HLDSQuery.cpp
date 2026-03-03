@@ -217,7 +217,7 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
         parse_info_buffer(buffer, source_response, out_data);
     }
     else if (goldsrc_response > 5) {
-        std::cout << "\n[Note] Second packet didn't arrive (Timeout or single-protocol server)." << std::endl;
+        std::cout << "\n[Note] Source packet didn't arrive (Timeout or single-protocol server)." << std::endl;
         parse_info_buffer(buffer, goldsrc_response, out_data);
     }
     else {
