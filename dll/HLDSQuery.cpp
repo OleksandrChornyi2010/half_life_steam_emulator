@@ -31,11 +31,15 @@ T HLDSQuery::read_num(uint8_t*& ptr, uint8_t* end) {
 
 HLDSQuery::HLDSQuery(const std::string& ip, uint16_t port) {
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+#ifdef _WIN32
+    DWORD timeout = static_cast<DWORD>(NETWORK_TIMEOUT_MS);
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+#else
     struct timeval tv;
-    tv.tv_sec = 1;
-    tv.tv_usec = 0;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
+    tv.tv_sec = NETWORK_TIMEOUT_MS / 1000;
+    tv.tv_usec = (NETWORK_TIMEOUT_MS % 1000) * 1000;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
+#endif
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
     inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr);
