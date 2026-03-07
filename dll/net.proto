@@ -164,6 +164,7 @@ message Gameserver {
     uint32 version = 19;
     uint32 latency = 20;
     bool had_successful_response = 21;
+    uint32 last_played = 22;
 
     uint32 ip = 32;
     uint32 port = 33;

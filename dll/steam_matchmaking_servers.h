@@ -57,7 +57,7 @@ struct Steam_Matchmaking_Request {
 struct ServerItem {
 	std::string ip;
 	int port;
-	u_int32_t last_played;
+	uint32_t last_played;
 };
 
 class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,

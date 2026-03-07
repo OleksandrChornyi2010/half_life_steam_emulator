@@ -141,13 +141,13 @@ void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem server, EMatchMak
         g.server.set_ip(host_ip);
         g.server.set_port(server.port);
         g.server.set_query_port(server.port);
+        g.server.set_last_played(server.last_played);
         g.type = type;
         g.last_recv = std::chrono::high_resolution_clock::now();
     }
 }
 
 void Steam_Matchmaking_Servers::ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec) {
-    std::vector<std::pair<std::string, int>> servers;
     std::string path = Local_Storage::data_path + PATH_SEPARATOR + Local_Storage::historyFileName;
     std::cout << "Save dir: " << path << std::endl;
 
@@ -163,22 +163,27 @@ void Steam_Matchmaking_Servers::ParseServersFile(EMatchMakingType request_type, 
             for (auto& [key, value] : category.children) {
                 std::cout << category_name << " Server " << key << " data:" << std::endl;
                 std::string serverAddress = value.values["address"]; // TODO: Add hasValue check
-                u_int32_t lastPlayed = 0;
-                try {
-                    lastPlayed = static_cast<u_int32_t>(std::stoul(value.values["LastPlayed"]));
-                } catch (...){}
+                uint32_t last_played = 0;
+                auto it = value.values.find("LastPlayed");
+                if (it != value.values.end() && !it->second.empty()) {
+                    try {
+                        last_played = static_cast<uint32_t>(std::stoul(it->second));
+                    } catch (const std::exception&) {
+                        last_played = 0;
+                    }
+                }
                 // Find the position of the colon
                 size_t colon_pos = serverAddress.find(':');
 
                 if (colon_pos == std::string::npos) {
-                    vec.push_back({serverAddress, 27015, lastPlayed});
+                    vec.push_back({serverAddress, 27015, last_played});
                 }
 
                 std::string ip = serverAddress.substr(0, colon_pos);
 
                 std::string port_str = serverAddress.substr(colon_pos + 1);
                 int port = std::stoi(port_str);
-                vec.push_back({ip, port, lastPlayed});
+                vec.push_back({ip, port, last_played});
             }
         }
     }
@@ -409,7 +414,7 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
     server->m_nBotPlayers = g->bot_player_count();
     server->m_bPassword = g->password_protected();
     server->m_bSecure = g->secure();
-    server->m_ulTimeLastPlayed = 0; // TODO: Get real last time played
+    server->m_ulTimeLastPlayed = g->last_played();
     server->m_nServerVersion = g->version();
     server->SetName(g->server_name().c_str());
     server->m_steamID = CSteamID((uint64)g->id());
