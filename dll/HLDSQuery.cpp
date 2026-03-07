@@ -65,7 +65,7 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
         std::cout << "Address: " << addr << std::endl;
 
         std::string name = read_string(ptr, end);
-        std::cout << "Name:    " << read_string(ptr, end) << std::endl;
+        std::cout << "Name:    " << name << std::endl;
 
         std::string map = read_string(ptr, end);
         std::cout << "Map:     " << map << std::endl;
@@ -194,35 +194,34 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
 }
 
 bool HLDSQuery::get_info(Gameserver* out_data) {
-    drain_socket(); // TODO: Check if draining socket needed
-
+    drain_socket();
+    std::vector<uint8_t> type = {};
+    std::vector<uint8_t> start_bytes = {};
     // A2S_INFO request
-    std::vector<uint8_t> req = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
-
-    // Send request once
-    auto start_time = std::chrono::high_resolution_clock::now();
-    sendto(sock, req.data(), req.size(), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
-
     uint8_t buffer[2048];
-    // Try to read first packet (GoldSrc)
-    ssize_t goldsrc_response = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
-    auto end_time = std::chrono::high_resolution_clock::now();
-    // Try to read second response (Source)
-    ssize_t source_response = recvfrom(sock, buffer, sizeof(buffer), 0, nullptr, nullptr);
+    std::vector<uint8_t> request = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
 
-    if (source_response > 0) {
+    auto start_time = std::chrono::high_resolution_clock::now();
+    ssize_t response = send_and_receive(request, buffer, sizeof(buffer));
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+
+    uint8_t* ptr = &buffer[4];
+    uint8_t* end = buffer + response;
+    uint8_t header = read_num<uint8_t>(ptr, end);
+
+    if (header == 0x41) {
+        for (int i = 0; i < 4; i++) request.push_back(buffer[5 + i]);
+        start_time = std::chrono::high_resolution_clock::now();
+        response = send_and_receive(request, buffer, sizeof(buffer));
         end_time = std::chrono::high_resolution_clock::now();
     }
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     uint32_t ping = static_cast<uint32_t>(duration.count());
 
-    if (source_response > 5) { // Prioritize source response
-        parse_info_buffer(buffer, source_response, out_data);
-    }
-    else if (goldsrc_response > 5) {
-        std::cout << "\n[Note] Source packet didn't arrive (Timeout or single-protocol server)." << std::endl;
-        parse_info_buffer(buffer, goldsrc_response, out_data);
+    if (response > 5) {
+        parse_info_buffer(buffer, response, out_data);
     }
     else {
         std::cout << "No response from server." << std::endl;

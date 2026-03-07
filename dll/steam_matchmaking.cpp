@@ -17,6 +17,8 @@
 
 #include "steam_matchmaking.h"
 
+#include "steam_matchmaking_servers.h"
+
 #define SEND_LOBBY_RATE 5.0
 
 #define PENDING_JOIN_TIMEOUT 10.0
@@ -271,12 +273,13 @@ Lobby_Member *Steam_Matchmaking::get_lobby_member(Lobby *lobby, CSteamID user_id
 // returns the number of favorites servers the user has stored
 int Steam_Matchmaking::GetFavoriteGameCount()
 {
-
     PRINT_DEBUG("GetFavoriteGameCount\n");
-    std::cout << "GetFavoriteGameCount" << std::endl;
-    return 0;
-}
+    auto &servers = Steam_Matchmaking_Servers::favorite_servers;
+    if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(eFavoritesServer, servers);
+    std::cout << "GetFavoriteGameCount: " << servers.size() << std::endl;
 
+    return servers.size();
+}
 
 // returns the details of the game server
 // iGame is of range [0,GetFavoriteGameCount())

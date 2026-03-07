@@ -15,6 +15,7 @@ private:
 
     void drain_socket();
     void parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_data);
+
     std::string read_string(uint8_t*& ptr, uint8_t* end);
     ssize_t send_and_receive(const std::vector<uint8_t>& request, uint8_t* buffer, size_t buf_size);
     ssize_t query_with_challenge(uint8_t type, uint8_t* buffer, size_t size);

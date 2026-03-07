@@ -93,7 +93,20 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
         }
 
         // Launching ProcessSingleServer in a separate thread
-        futures.push_back(std::async(std::launch::async, &Steam_Matchmaking_Servers::ProcessSingleServer, this, server, type));
+        futures.push_back(std::async(std::launch::async, [this, server, type, request_index, id]() {
+            Steam_Matchmaking_Servers_Gameserver g{};
+            this->ProcessSingleServer(server, type, g);
+
+            std::lock_guard<std::recursive_mutex> lock(global_mutex);
+            if (request_index < requests.size() && requests[request_index].id == id) {
+                if (requests[request_index].cancelled) {
+                    return;
+                }
+            }
+            gameservers.push_back(g);
+            std::cout << "Added server: " << server.ip << ":" << server.port << " appid: " << g.server.appid() << std::endl;
+        }));
+        //ProcessSingleServer(server, type);
     }
 
     // Wait for all threads to finish
@@ -107,25 +120,17 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
     }
 }
 
-void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem server, EMatchMakingType type) {
-    Steam_Matchmaking_Servers_Gameserver g{};
-
+void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver& g) {
     // Heavy network operation happens here in parallel
     if (FetchServerData(server.ip, server.port, &g.server)) {
-        std::lock_guard<std::recursive_mutex> lock(global_mutex);
-
         uint32_t network_ip = inet_addr(server.ip.c_str());
         uint32_t host_ip = ntohl(network_ip);
 
         g.server.set_ip(host_ip);
         g.server.set_port(server.port);
         g.server.set_query_port(server.port);
-        // g.server.set_appid(appid);
         g.type = type;
         g.last_recv = std::chrono::high_resolution_clock::now();
-
-        gameservers.push_back(g);
-        std::cout << "Added server: " << server.ip << ":" << server.port << " appid: " << g.server.appid() << std::endl;
     }
 }
 
@@ -303,11 +308,12 @@ void Steam_Matchmaking_Servers::ReleaseRequest( HServerListRequest hServerListRe
 {
     PRINT_DEBUG("ReleaseRequest %p\n", hServerListRequest);
     std::cout << "=================== Releasing request id: " << hServerListRequest << std::endl;
+
     auto r = std::begin(requests);
     while (r != std::end(requests)) {
         if (r->id == hServerListRequest) {
-            std::lock_guard<std::recursive_mutex> lock(global_mutex);
             //NOTE: some garbage games release the request before getting server details from it.
+            std::lock_guard<std::recursive_mutex> lock(global_mutex);
             r = requests.erase(r);
         }
         else {
@@ -395,7 +401,7 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
     }
 
     server->m_NetAdr.Init(g->ip(), query_port, g->port());
-    std::cout << "server_details_ip_9876: " << g->ip() << " mp: " << g-> map_name() << " q-pt: " << query_port << " pt: " << g->port() << " ping: " << g->latency() << " had_response: " << g->had_successful_response() << std::endl;
+    //std::cout << "server_details_ip_9876: " << g->ip() << " mp: " << g-> map_name() << " q-pt: " << query_port << " pt: " << g->port() << " ping: " << g->latency() << " had_response: " << g->had_successful_response() << std::endl;
     server->m_nPing = g->latency();
     server->m_bHadSuccessfulResponse = g->had_successful_response();
     server->m_bDoNotRefresh = false;
@@ -451,7 +457,7 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
 // ISteamMatchmakingServerListResponse::ServerResponded() callbacks
 gameserveritem_t *Steam_Matchmaking_Servers::GetServerDetails( HServerListRequest hRequest, int iServer )
 {
-    std::cout << "GetServerDetails iServer: " << iServer << std::endl;
+    //std::cout << "GetServerDetails iServer: " << iServer << std::endl;
     PRINT_DEBUG("GetServerDetails %p %i\n", hRequest, iServer);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 
@@ -491,6 +497,8 @@ void Steam_Matchmaking_Servers::CancelQuery( HServerListRequest hRequest )
 {
     PRINT_DEBUG("CancelQuery %p\n", hRequest);
     std::cout << "Canceling Query ============================= " << hRequest << std::endl;
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+
     auto r = std::begin(requests);
     while (r != std::end(requests)) {
         if (r->id == hRequest) {
@@ -549,7 +557,7 @@ int Steam_Matchmaking_Servers::GetServerCount( HServerListRequest hRequest )
 void Steam_Matchmaking_Servers::RefreshServer( HServerListRequest hRequest, int iServer )
 {
     PRINT_DEBUG("RefreshServer %p\n", hRequest);
-    std::cout << "RefreshServer id: " << hRequest << " i: " << iServer << std::endl;
+    std::cout << "RefreshServer int id: " << (int)hRequest << " i: " << iServer << std::endl;
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     for (auto &r : requests) {
         if (r.id == hRequest) {
@@ -557,7 +565,6 @@ void Steam_Matchmaking_Servers::RefreshServer( HServerListRequest hRequest, int 
                 Steam_Matchmaking_Servers_Gameserver gs_copy = r.gameservers_filtered[iServer];
                 reactivate_request(r);
                 std::thread([this, hRequest, gs_copy, iServer]() mutable {
-
                     RefreshSingleServer(gs_copy, iServer);
                     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 
@@ -565,14 +572,14 @@ void Steam_Matchmaking_Servers::RefreshServer( HServerListRequest hRequest, int 
                         if (req.id == hRequest) {
                             req.gameservers_filtered[iServer] = gs_copy;
                             req.finished_pushing = true;
-
                             break;
                         }
                     }
                 }).detach();
             }
+            break;
         }
-        break;
+
     }
 }
 
@@ -592,6 +599,7 @@ void Steam_Matchmaking_Servers::RefreshSingleServer(Steam_Matchmaking_Servers_Ga
 }
 
 void Steam_Matchmaking_Servers::reactivate_request(Steam_Matchmaking_Request &request) {
+    std::cout << "Reactivate requ r.id: " << request.id << std::endl;
     request.cancelled = false;
     request.completed = false;
     request.finished_pushing = false;
@@ -745,6 +753,23 @@ void Steam_Matchmaking_Servers::ReadInput() {
     }
 }
 
+void Steam_Matchmaking_Servers::DebugListServers(const Steam_Matchmaking_Request &r, const std::string &label) {
+    std::cout << "=== [" << label << "] Server List (Size: " << r.gameservers_filtered.size() << ") ===" << std::endl;
+
+    for (size_t i = 0; i < r.gameservers_filtered.size(); ++i) {
+        // Taking a constant reference to each server element
+        const auto &gs = r.gameservers_filtered[i];
+
+        // Assuming gs.server is the Protobuf object with getters
+        std::cout << i << ". " << gs.server.server_name() << std::endl;
+        std::cout << "   Addr: " << ip_to_string(gs.server.ip()) << ":" << gs.server.port()
+                  << " | Ping: " << gs.server.latency() << "ms" << std::endl;
+        //std::cout << "   Players: " << gs.server.players() << "/" << gs.server.max_players() << std::endl;
+        std::cout << "   Map: " << gs.server.map_name() << " | AppID: " << gs.server.appid() << std::endl;
+        std::cout << "------------------------------------------" << std::endl;
+    }
+}
+
 void Steam_Matchmaking_Servers::RunCallbacks()
 {
     PRINT_DEBUG("Steam_Matchmaking_Servers::RunCallbacks\n");
@@ -762,6 +787,7 @@ void Steam_Matchmaking_Servers::RunCallbacks()
             if (!r.gameservers_filtered.empty()) {
                 r.callbacks->RefreshComplete(r.id, eServerResponded);
                 std::cout << "Refresh complete (responded): " << r.finished_pushing << " r.gmf.size: " << r.gameservers_filtered.size() << std::endl;
+                //DebugListServers(r, "RefreshComplete");
             } else {
                 r.callbacks->RefreshComplete(r.id, eNoServersListedOnMasterServer);
                 std::cout << "\nRefresh no-listed type: " << r.type << " id: " << r.id << std::endl;
@@ -772,7 +798,7 @@ void Steam_Matchmaking_Servers::RunCallbacks()
         if (r.callbacks) {
             auto g = std::begin(gameservers);
             while (g != std::end(gameservers)) {
-                if (check_timedout(g->last_recv, SERVER_TIMEOUT)) { // TODO: Check if such case can be met
+                if (check_timedout(g->last_recv, SERVER_TIMEOUT)) {
                     g = gameservers.erase(g);
                     PRINT_DEBUG("SERVER TIMEOUT\n");
                     std::cout << "Time out" << std::endl;
@@ -814,7 +840,7 @@ void Steam_Matchmaking_Servers::RunCallbacks()
     }
     auto dip = std::begin(direct_ip_requests);
     while (dip != std::end(direct_ip_requests)) {
-        if (!dip->processed && check_timedout(dip->created, DIRECT_IP_DELAY)) { // TODO: Check if such case can be met
+        if (!dip->processed && check_timedout(dip->created, DIRECT_IP_DELAY)) {
             dip = direct_ip_requests.erase(dip);
             std::cout << "DIP timeout" << std::endl;
         } else {
@@ -865,7 +891,7 @@ void Steam_Matchmaking_Servers::RunCallbacks()
             std::cout << "%%%%%%%%%% POST info: " << std::endl;
             std::cout << "Ping " << r.ping_server_info.m_nPing << std::endl;
             std::cout << "Name " << r.ping_server_info.GetName() << std::endl;
-            r.processed = true; // TODO: Check if saving request after answering is needed
+            r.processed = true;
         }*/
         /*for (auto &g : gameservers) {
             PRINT_DEBUG("server: %lu:%hu\n", g.server.ip(), g.server.query_port());
@@ -895,12 +921,10 @@ void Steam_Matchmaking_Servers::RunCallbacks()
                     r.ping_response->ServerResponded(server);
                     r.ping_response = NULL;
                 }
-                //TODO: players response
             }
         }*/
 
         /*if (r.rules_response) r.rules_response->RulesRefreshComplete();
-        //TODO: player response
         if (r.players_response) r.players_response->PlayersRefreshComplete();
         if (r.ping_response) r.ping_response->ServerFailedToRespond();*/
     // }

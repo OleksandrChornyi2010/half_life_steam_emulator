@@ -66,9 +66,6 @@ public ISteamMatchmakingServers001
     class Settings *settings;
     class Networking *network;
 
-	std::vector<ServerItem> history_servers;
-	std::vector<ServerItem> favorite_servers;
-
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers;
     std::vector <struct Steam_Matchmaking_Request> requests;
     std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
@@ -77,15 +74,20 @@ public ISteamMatchmakingServers001
 	bool FetchServerData(std::string ip, uint16_t port, Gameserver* out_data);
 	void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type);
 	void ReadInput();
-	void reactivate_request(Steam_Matchmaking_Request &r);
+
+    void DebugListServers(const Steam_Matchmaking_Request &r, const std::string &label);
+
+    void reactivate_request(Steam_Matchmaking_Request &r);
 	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
 	void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
-	void ProcessSingleServer(ServerItem server, EMatchMakingType type);
+	void ProcessSingleServer(ServerItem server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver& g);
 	std::string ip_to_string(uint32_t ip_host_order);
 
-    void ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
-
 public:
+	inline static std::vector<ServerItem> history_servers;
+	inline static std::vector<ServerItem> favorite_servers;
+    static void ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
+
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
 
 	HServerListRequest RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type);
