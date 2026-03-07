@@ -30,6 +30,7 @@ T HLDSQuery::read_num(uint8_t*& ptr, uint8_t* end) {
 }
 
 HLDSQuery::HLDSQuery(const std::string& ip, uint16_t port) {
+    ip_gl = ip;
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 #ifdef _WIN32
     DWORD timeout = static_cast<DWORD>(NETWORK_TIMEOUT_MS);
@@ -195,8 +196,6 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
 
 bool HLDSQuery::get_info(Gameserver* out_data) {
     drain_socket();
-    std::vector<uint8_t> type = {};
-    std::vector<uint8_t> start_bytes = {};
     // A2S_INFO request
     uint8_t buffer[2048];
     std::vector<uint8_t> request = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
@@ -209,8 +208,9 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
     uint8_t* ptr = &buffer[4];
     uint8_t* end = buffer + response;
     uint8_t header = read_num<uint8_t>(ptr, end);
-
+    bool chal = false;
     if (header == 0x41) {
+        chal = true;
         for (int i = 0; i < 4; i++) request.push_back(buffer[5 + i]);
         start_time = std::chrono::high_resolution_clock::now();
         response = send_and_receive(request, buffer, sizeof(buffer));
@@ -224,7 +224,7 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
         parse_info_buffer(buffer, response, out_data);
     }
     else {
-        std::cout << "No response from server." << std::endl;
+        std::cout << "No response from server. chal: " << chal << " ip: " << ip_gl << " header: " << header << std::endl;
         out_data->set_had_successful_response(false);
         return false;
     }

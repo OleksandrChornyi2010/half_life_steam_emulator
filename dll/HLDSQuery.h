@@ -8,7 +8,7 @@
 #include "base.h"
 
 class HLDSQuery {
-private:
+    std::string ip_gl;
     int sock;
     struct sockaddr_in server_addr;
     static constexpr uint32_t NETWORK_TIMEOUT_MS = 500;

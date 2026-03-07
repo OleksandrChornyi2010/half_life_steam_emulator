@@ -49,7 +49,7 @@ struct Steam_Matchmaking_Request {
     HServerListRequest id;
     ISteamMatchmakingServerListResponse *callbacks;
 	ISteamMatchmakingServerListResponse001 *old_callbacks;
-    bool completed, cancelled, released, finished_pushing, responded, dont_answer;  // TODO: released is not needed anymore
+    bool completed, cancelled, finished_pushing, responded, dont_answer;
 	int i = 0;
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
 	EMatchMakingType type{};
@@ -67,12 +67,14 @@ public ISteamMatchmakingServers001
     class Networking *network;
 
     std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers;
+	std::vector <struct Steam_Matchmaking_Servers_Gameserver> gameservers_lan;
     std::vector <struct Steam_Matchmaking_Request> requests;
     std::vector <struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
 	int server_list_request = 0;
 	void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
 	bool FetchServerData(std::string ip, uint16_t port, Gameserver* out_data);
 	void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type);
+	void ProcessLANServerList(HServerListRequest id, size_t request_index);
 	void ReadInput();
 
     void DebugListServers(const Steam_Matchmaking_Request &r, const std::string &label);
