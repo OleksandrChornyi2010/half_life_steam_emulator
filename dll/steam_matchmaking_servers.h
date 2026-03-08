@@ -58,6 +58,7 @@ struct ServerItem {
 	std::string ip;
 	int port;
 	uint32_t last_played;
+	Gameserver gameserver;
 };
 
 class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
@@ -82,7 +83,7 @@ public ISteamMatchmakingServers001
     void reactivate_request(Steam_Matchmaking_Request &r);
 	void ProcessPingRequest( uint32 unIP, uint16 usPort, HServerQuery id );
 	void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
-	void ProcessSingleServer(ServerItem server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver& g);
+	void ProcessSingleServer(ServerItem& server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver& g);
 	std::string ip_to_string(uint32_t ip_host_order);
 
 public:

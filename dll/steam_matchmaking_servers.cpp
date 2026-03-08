@@ -34,7 +34,6 @@ Steam_Matchmaking_Servers::Steam_Matchmaking_Servers(class Settings *settings, c
     this->settings = settings;
     this->network = network;
     this->network->setCallback(CALLBACK_ID_GAMESERVER, (uint64) 0, &network_callback, this);
-
 }
 
 HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type)
@@ -90,11 +89,9 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
     auto &servers = request_type == eHistoryServer ? history_servers : favorite_servers;
     if (servers.empty()) ParseServersFile(request_type, servers);
 
-    // Vector to store futures for each parallel task
     std::vector<std::future<void>> futures;
 
     for (auto& server : servers) {
-        // Checking if the request was cancelled before spawning a new thread
         {
             std::lock_guard<std::recursive_mutex> lock(global_mutex);
             if (request_index < requests.size() && requests[request_index].id == id) {
@@ -105,7 +102,7 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
         }
 
         // Launching ProcessSingleServer in a separate thread
-        futures.push_back(std::async(std::launch::async, [this, server, type, request_index, id]() {
+        futures.push_back(std::async(std::launch::async, [this, &server, type, request_index, id]() {
             Steam_Matchmaking_Servers_Gameserver g{};
             this->ProcessSingleServer(server, type, g);
 
@@ -121,7 +118,6 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
         //ProcessSingleServer(server, type);
     }
 
-    // Wait for all threads to finish
     for (auto& f : futures) {
         f.get();
     }
@@ -132,8 +128,7 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
     }
 }
 
-void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver& g) {
-    // Heavy network operation happens here in parallel
+void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem& server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver& g) {
     if (FetchServerData(server.ip, server.port, &g.server)) {
         uint32_t network_ip = inet_addr(server.ip.c_str());
         uint32_t host_ip = ntohl(network_ip);
@@ -144,6 +139,7 @@ void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem server, EMatchMak
         g.server.set_last_played(server.last_played);
         g.type = type;
         g.last_recv = std::chrono::high_resolution_clock::now();
+        server.gameserver = g.server;
     }
 }
 
@@ -201,9 +197,8 @@ bool Steam_Matchmaking_Servers::FetchServerData(std::string ip, uint16_t port, G
 HServerListRequest Steam_Matchmaking_Servers::RequestInternetServerList( AppId_t iApp, STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse *pRequestServersResponse )
 {
     PRINT_DEBUG("RequestInternetServerList\n");
-
     //TODO
-    return RequestLANServerList(iApp, pRequestServersResponse);
+    return RequestServerList(iApp, pRequestServersResponse, eInternetServer);
 }
 
 HServerListRequest Steam_Matchmaking_Servers::RequestLANServerList( AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse )

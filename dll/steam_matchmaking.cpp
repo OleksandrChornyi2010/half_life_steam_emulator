@@ -277,7 +277,6 @@ int Steam_Matchmaking::GetFavoriteGameCount()
     auto &servers = Steam_Matchmaking_Servers::favorite_servers;
     if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(eFavoritesServer, servers);
     std::cout << "GetFavoriteGameCount: " << servers.size() << std::endl;
-
     return servers.size();
 }
 
@@ -289,10 +288,29 @@ int Steam_Matchmaking::GetFavoriteGameCount()
 bool Steam_Matchmaking::GetFavoriteGame( int iGame, AppId_t *pnAppID, uint32 *pnIP, uint16 *pnConnPort, uint16 *pnQueryPort, uint32 *punFlags, uint32 *pRTime32LastPlayedOnServer )
 {
     PRINT_DEBUG("GetFavoriteGame\n");
-    std::cout << "GetFavoriteGame___" << std::endl;
-    return false;
-}
+    std::cout << "GetFavoriteGame___ of " << iGame << " :" << std::endl;
+    if (!punFlags || *punFlags == k_unFavoriteFlagNone) return false;
+    auto &servers = *punFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
+    EMatchMakingType type = *punFlags == k_unFavoriteFlagHistory ? eHistoryServer : eFavoritesServer;
+    if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(type, servers);
 
+    try {
+        auto &server = servers.at(iGame);
+        if (pnAppID) *pnAppID = server.gameserver.appid();
+        if (pnIP) *pnIP = server.gameserver.ip();
+        if (pnConnPort) *pnConnPort = server.gameserver.port();
+        if (pnQueryPort) *pnQueryPort = server.gameserver.query_port();
+        if (pRTime32LastPlayedOnServer) *pRTime32LastPlayedOnServer = server.gameserver.last_played();
+        std::cout << "{\n" << "AppID: " << server.gameserver.appid() << std::endl;
+        std::cout << "Ip: " << server.gameserver.ip() << std::endl;
+        std::cout << "Port: " << server.gameserver.port() << " query: " << server.gameserver.query_port() << std::endl;
+        std::cout << "lastPlayed: " << server.gameserver.last_played() << "\n}" << std::endl;
+    }
+    catch (const std::out_of_range& e) {
+        return false;
+    }
+    return true;
+}
 
 // adds the game server to the local list; updates the time played of the server if it already exists in the list
 int Steam_Matchmaking::AddFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer )
@@ -303,7 +321,6 @@ int Steam_Matchmaking::AddFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConn
     return 0;
 }
 
-
 // removes the game server from the local storage; returns true if one was removed
 bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags )
 {
@@ -311,7 +328,6 @@ bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 n
     std::cout << "RemoveFavoriteGame" << std::endl;
     return false;
 }
-
 
 ///////
 // Game lobby functions
