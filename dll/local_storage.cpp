@@ -406,6 +406,11 @@ std::string Local_Storage::get_program_path()
     return get_full_program_path();
 }
 
+std::string Local_Storage::get_history_file_path()
+{
+    return data_path + PATH_SEPARATOR + historyFileName;
+}
+
 std::string Local_Storage::get_game_settings_path()
 {
     return get_program_path().append(game_settings_folder).append(PATH_SEPARATOR);

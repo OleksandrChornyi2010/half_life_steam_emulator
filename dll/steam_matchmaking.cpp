@@ -18,6 +18,7 @@
 #include "steam_matchmaking.h"
 
 #include "steam_matchmaking_servers.h"
+#include "vdf_parser.h"
 
 #define SEND_LOBBY_RATE 5.0
 
@@ -326,10 +327,41 @@ bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 n
 {
     PRINT_DEBUG("RemoveFavoriteGame\n");
     std::cout << "RemoveFavoriteGame" << std::endl;
+    if (unFlags == k_unFavoriteFlagNone) return false;
+    auto &servers = unFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
+    EMatchMakingType type = unFlags == k_unFavoriteFlagHistory ? eHistoryServer : eFavoritesServer;
+    if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(type, servers);
+    std::string path = Local_Storage::get_history_file_path();
+
+    for (auto it = servers.begin(); it != servers.end(); ) {
+        uint32_t network_ip = inet_addr(it->ip.c_str());
+        uint32_t host_ip = ntohl(network_ip);
+
+        if (nIP == host_ip && nConnPort == it->port) {
+            it = servers.erase(it);
+
+            VDFNode node = Steam_Matchmaking_Servers::ConvertToNode();
+            VDFParser::write(path, node);
+            FavoritesListChanged_t callbackData;
+            callbackData.m_nIP = nIP;
+            callbackData.m_nQueryPort = nQueryPort;
+            callbackData.m_nConnPort = nConnPort;
+            callbackData.m_nAppID = nAppID;
+            callbackData.m_nFlags = unFlags;
+            callbackData.m_bAdd = false;
+            int id = FavoritesListChanged_t::k_iCallback;
+
+            this->callbacks->addCBResult(id, &callbackData, sizeof(callbackData));
+
+            std::cout << "Found and removed" << std::endl;
+            return true;
+        }
+        ++it;
+    }
+    std::cout << "Not Found" << std::endl;
     return false;
 }
 
-///////
 // Game lobby functions
 
 // Get a list of relevant lobbies
@@ -356,7 +388,7 @@ bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 n
         }
     }
 */
-// 
+//
 #define LOBBY_SEARCH_TIMEOUT 0.2 //Tested on real steam
 STEAM_CALL_RESULT( LobbyMatchList_t )
 SteamAPICall_t Steam_Matchmaking::RequestLobbyList()

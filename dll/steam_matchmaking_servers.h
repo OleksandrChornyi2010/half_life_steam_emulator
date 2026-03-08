@@ -16,6 +16,7 @@
    <http://www.gnu.org/licenses/>.  */
 
 #include "base.h"
+#include "vdf_parser.h"
 
 #define SERVER_TIMEOUT 10.0
 #define DIRECT_IP_DELAY 10.0
@@ -76,7 +77,8 @@ public ISteamMatchmakingServers001
 	bool FetchServerData(std::string ip, uint16_t port, Gameserver* out_data);
 	void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type);
 	void ProcessLANServerList(HServerListRequest id, size_t request_index);
-	void ReadInput();
+
+    void ReadInput();
 
     void DebugListServers(const Steam_Matchmaking_Request &r, const std::string &label);
 
@@ -90,6 +92,7 @@ public:
 	inline static std::vector<ServerItem> history_servers;
 	inline static std::vector<ServerItem> favorite_servers;
     static void ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
+	static VDFNode ConvertToNode();
 
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
 

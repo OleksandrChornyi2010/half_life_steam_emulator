@@ -59,9 +59,12 @@ private:
 public:
     static uint32 i_appid;
     static std::string get_program_path();
+    static std::string get_history_file_path();
     static std::string get_game_settings_path();
     static std::string get_user_appdata_path();
+    // TODO: Get history file path
     static std::string data_path;
+
     Local_Storage(std::string save_directory);
     static int get_file_data(std::string full_path, char *data, unsigned int max_length, unsigned int offset=0);
     void setAppId(uint32 appid);

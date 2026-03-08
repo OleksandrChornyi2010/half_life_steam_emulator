@@ -85,6 +85,57 @@ void Steam_Matchmaking_Servers::ProcessLANServerList(HServerListRequest id, size
     }
 }
 
+VDFNode Steam_Matchmaking_Servers::ConvertToNode() {
+    VDFNode root;
+    root.name = "root";
+
+    auto& filters = root.children["Filters"];
+    filters.name = "Filters";
+
+    auto& favoritesNode = filters.children["favorites"];
+    favoritesNode.name = "favorites";
+
+    auto& historyNode = filters.children["history"];
+    historyNode.name = "history";
+
+    // favorites
+    int fav_i = 1;
+    for (auto& fav_item : favorite_servers) {
+        VDFNode item;
+        std::string index_str = std::to_string(fav_i);
+        item.name = index_str;
+
+        std::string full_addr = fav_item.ip + ":" + std::to_string(fav_item.port);
+        item.values["name"] = full_addr;
+        item.values["address"] = full_addr;
+        item.values["LastPlayed"] = std::to_string(fav_item.last_played);
+        item.values["appid"] = std::to_string(Local_Storage::i_appid);
+        item.values["accountid"] = "0";
+
+        favoritesNode.children[index_str] = item;
+        fav_i++;
+    }
+
+    // history
+    int his_i = 1;
+    for (auto& his_item : history_servers) {
+        VDFNode item;
+        std::string index_str = std::to_string(his_i);
+        item.name = index_str;
+
+        std::string full_addr = his_item.ip + ":" + std::to_string(his_item.port);
+        item.values["name"] = full_addr;
+        item.values["address"] = full_addr;
+        item.values["LastPlayed"] = std::to_string(his_item.last_played);
+        item.values["appid"] = std::to_string(Local_Storage::i_appid);
+        item.values["accountid"] = "0";
+
+        historyNode.children[index_str] = item;
+        his_i++;
+    }
+    return root;
+}
+
 void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type) {
     auto &servers = request_type == eHistoryServer ? history_servers : favorite_servers;
     if (servers.empty()) ParseServersFile(request_type, servers);
@@ -104,7 +155,7 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(HServerListRequest id, EM
         // Launching ProcessSingleServer in a separate thread
         futures.push_back(std::async(std::launch::async, [this, &server, type, request_index, id]() {
             Steam_Matchmaking_Servers_Gameserver g{};
-            this->ProcessSingleServer(server, type, g);
+            ProcessSingleServer(server, type, g);
 
             std::lock_guard<std::recursive_mutex> lock(global_mutex);
             if (request_index < requests.size() && requests[request_index].id == id) {
@@ -144,7 +195,7 @@ void Steam_Matchmaking_Servers::ProcessSingleServer(ServerItem& server, EMatchMa
 }
 
 void Steam_Matchmaking_Servers::ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec) {
-    std::string path = Local_Storage::data_path + PATH_SEPARATOR + Local_Storage::historyFileName;
+    std::string path = Local_Storage::get_history_file_path();
     std::cout << "Save dir: " << path << std::endl;
 
     std::string category_name = request_type == eHistoryServer ? "history" : "favorites";
@@ -216,6 +267,20 @@ HServerListRequest Steam_Matchmaking_Servers::RequestFriendsServerList( AppId_t 
 HServerListRequest Steam_Matchmaking_Servers::RequestFavoritesServerList( AppId_t iApp, STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse *pRequestServersResponse )
 {
     PRINT_DEBUG("RequestFavoritesServerList\n");
+    if (ppchFilters && nFilters > 0) {
+        std::cout << "--- Filters for AppID " << iApp << " (" << nFilters << " total) ---" << std::endl;
+        for (uint32 i = 0; i < nFilters; ++i) {
+            if (ppchFilters[i]) {
+                std::cout << "  [" << i << "] Key: \"" << ppchFilters[i]->m_szKey
+                          << "\" | Value: \"" << ppchFilters[i]->m_szValue << "\"" << std::endl;
+            } else {
+                std::cout << "  [" << i << "] Filter pointer is NULL" << std::endl;
+            }
+        }
+        std::cout << "------------------------------------------" << std::endl;
+    } else {
+        std::cout << "No filters provided for RequestFavoritesServerList." << std::endl;
+    }
     return RequestServerList(iApp, pRequestServersResponse, eFavoritesServer);
 }
 
@@ -518,9 +583,11 @@ bool Steam_Matchmaking_Servers::IsRefreshing( HServerListRequest hRequest )
     std::cout << "IsRefreshing h: " << hRequest << std::endl;
     for (auto &r : requests) {
         if (r.id == hRequest && !r.cancelled && !r.responded && !r.finished_pushing) {
+            std::cout << "IsRefreshing true" << std::endl;
             return true;
         }
     }
+    std::cout << "IsRefreshing FALSE" << std::endl;
     return false;
 }
 
