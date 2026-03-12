@@ -5,27 +5,24 @@
 #include "vdf_parser.h"
 
 // Helper to check if a child exists
-bool VDFNode::hasChild(const std::string& key) const {
+bool VDFNode::hasChild(const std::string &key) const {
     return children.find(key) != children.end();
 }
 
 // Helper to check if a value exists
-bool VDFNode::hasValue(const std::string& key) const {
+bool VDFNode::hasValue(const std::string &key) const {
     return values.find(key) != values.end();
 }
 
-VDFNode VDFParser::parse(const std::string& filename) {
-    std::ifstream file(filename);
+VDFNode VDFParser::parse(const std::string &filename) {
+    Local_Storage::safe_create_file(filename);
     VDFNode root;
     root.name = "root";
 
-    if (!file.is_open()) {
-        std::cout << "VDFParser::parse(): Could not open file: " << filename << std::endl;
-        return root;
-    }
+    std::ifstream file(filename);
 
     std::string content((std::istreambuf_iterator<char>(file)),
-                         std::istreambuf_iterator<char>());
+                        std::istreambuf_iterator<char>());
     file.close();
 
     size_t pos = 0;
@@ -33,34 +30,34 @@ VDFNode VDFParser::parse(const std::string& filename) {
     return root;
 }
 
-void VDFParser::write(const std::string& filename, const VDFNode& node) {
-    std::ofstream file(filename);
-    if (!file.is_open()) return;
+void VDFParser::write(const std::string &filename, const VDFNode &node) {
+    Local_Storage::safe_create_file(filename);
 
+    std::ofstream file(filename);
     // The root node is a container, we write its children
-    for (auto const& [name, child] : node.children) {
+    for (auto const &[name, child] : node.children) {
         writeRecursive(file, child, 0);
     }
     file.close();
 }
 
-void VDFParser::writeRecursive(std::ofstream& file, const VDFNode& node, int depth) {
+void VDFParser::writeRecursive(std::ofstream &file, const VDFNode &node, int depth) {
     std::string indent(depth, '\t');
     file << indent << "\"" << node.name << "\"\n";
     file << indent << "{\n";
 
-    for (auto const& [key, val] : node.values) {
+    for (auto const &[key, val] : node.values) {
         file << indent << "\t\"" << key << "\"\t\t\"" << val << "\"\n";
     }
 
-    for (auto const& [name, child] : node.children) {
+    for (auto const &[name, child] : node.children) {
         writeRecursive(file, child, depth + 1);
     }
 
     file << indent << "}\n";
 }
 
-void VDFParser::parseRecursive(const std::string& content, size_t& pos, VDFNode& currentNode) {
+void VDFParser::parseRecursive(const std::string &content, size_t &pos, VDFNode &currentNode) {
     // Regex to match "key" "value" or "key" {
     std::regex tokenRegex(R"(\s*\"([^\"]+)\"(\s+\"([^\"]+)\"|(\s*\{)))");
     std::smatch match;

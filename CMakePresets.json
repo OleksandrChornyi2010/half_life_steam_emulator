@@ -1,0 +1,95 @@
+{
+    "version": 8,
+    "configurePresets": [
+        {
+            "name": "base-linux",
+            "hidden": true,
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/linux/${presetName}",
+            "cacheVariables": {
+                "CMAKE_C_COMPILER": "/usr/bin/gcc",
+                "CMAKE_CXX_COMPILER": "/usr/bin/g++"
+            }
+        },
+        {
+            "name": "base-windows",
+            "hidden": true,
+            "generator": "Visual Studio 17 2022",
+            "binaryDir": "${sourceDir}/build/win/${presetName}"
+        },
+        {
+            "name": "linux-x86-debug",
+            "displayName": "Linux x86 Debug (32-bit)",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_FLAGS": "-m32",
+                "CMAKE_CXX_FLAGS": "-m32",
+                "CMAKE_SHARED_LINKER_FLAGS": "-m32"
+            }
+        },
+        {
+            "name": "linux-x86-release",
+            "displayName": "Linux x86 Release (32-bit)",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_FLAGS": "-m32",
+                "CMAKE_CXX_FLAGS": "-m32",
+                "CMAKE_SHARED_LINKER_FLAGS": "-m32"
+            }
+        },
+        {
+            "name": "linux-x64-debug",
+            "displayName": "Linux x64 Debug (64-bit)",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "linux-x64-release",
+            "displayName": "Linux x64 Release (64-bit)",
+            "inherits": "base-linux",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-x86-debug",
+            "displayName": "Windows x86 Debug (32-bit)",
+            "inherits": "base-windows",
+            "architecture": "Win32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-x86-release",
+            "displayName": "Windows x86 Release (32-bit)",
+            "inherits": "base-windows",
+            "architecture": "Win32",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "win-x64-debug",
+            "displayName": "Windows x64 Debug (64-bit)",
+            "inherits": "base-windows",
+            "architecture": "x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "win-x64-release",
+            "displayName": "Windows x64 Release (64-bit)",
+            "inherits": "base-windows",
+            "architecture": "x64",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        }
+    ]
+}

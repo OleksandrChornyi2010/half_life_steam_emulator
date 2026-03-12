@@ -22,11 +22,9 @@
 
 #define MAX_FILENAME_LENGTH 300
 
-union image_pixel_t
-{
+union image_pixel_t {
     uint32_t pixel;
-    struct pixel_channels_t
-    {
+    struct pixel_channels_t {
         uint8_t r;
         uint8_t g;
         uint8_t b;
@@ -34,47 +32,48 @@ union image_pixel_t
     } channels;
 };
 
-struct image_t
-{
+struct image_t {
     size_t width;
     size_t height;
     std::vector<image_pixel_t> pix_map;
 };
 
 class Local_Storage {
-public:
+  public:
     static constexpr auto inventory_storage_folder = "inventory";
-    static constexpr auto settings_storage_folder  = "settings";
-    static constexpr auto remote_storage_folder    = "remote";
-    static constexpr auto stats_storage_folder     = "stats";
+    static constexpr auto settings_storage_folder = "settings";
+    static constexpr auto remote_storage_folder = "remote";
+    static constexpr auto stats_storage_folder = "stats";
     static constexpr auto leaderboard_storage_folder = "leaderboard";
-    static constexpr auto user_data_storage        = "local";
-    static constexpr auto screenshots_folder       = "screenshots";
-    static constexpr auto game_settings_folder     = "steam_settings";
+    static constexpr auto user_data_storage = "local";
+    static constexpr auto screenshots_folder = "screenshots";
+    static constexpr auto game_settings_folder = "steam_settings";
+    static constexpr auto platform_folder = "platform";
     static constexpr auto historyFileName = "serverbrowser_hist.vdf";
 
-private:
+  private:
     std::string save_directory;
     std::string appid;
-public:
+
+  public:
     static uint32 i_appid;
     static std::string get_program_path();
     static std::string get_history_file_path();
     static std::string get_game_settings_path();
     static std::string get_user_appdata_path();
-    // TODO: Get history file path
     static std::string data_path;
 
     Local_Storage(std::string save_directory);
-    static int get_file_data(std::string full_path, char *data, unsigned int max_length, unsigned int offset=0);
+    static int get_file_data(std::string full_path, char *data, unsigned int max_length, unsigned int offset = 0);
     void setAppId(uint32 appid);
     static int store_file_data(std::string folder, std::string file, char *data, unsigned int length);
     static std::vector<std::string> get_filenames_path(std::string path);
 
     int store_data(std::string folder, std::string file, char *data, unsigned int length);
     int store_data_settings(std::string file, char *data, unsigned int length);
-    int get_data(std::string folder, std::string file, char *data, unsigned int max_length, unsigned int offset=0);
+    int get_data(std::string folder, std::string file, char *data, unsigned int max_length, unsigned int offset = 0);
     int get_data_settings(std::string file, char *data, unsigned int max_length);
+    static bool safe_create_file(std::string full_path);
     int count_files(std::string folder);
     bool iterate_file(std::string folder, int index, char *output_filename, int32 *output_size);
     bool file_exists(std::string folder, std::string file);
@@ -86,12 +85,12 @@ public:
 
     bool update_save_filenames(std::string folder);
 
-    bool load_json(std::string full_path, nlohmann::json& json);
-    bool load_json_file(std::string folder, std::string const& file, nlohmann::json& json);
-    bool write_json_file(std::string folder, std::string const& file, nlohmann::json const& json);
+    bool load_json(std::string full_path, nlohmann::json &json);
+    bool load_json_file(std::string folder, std::string const &file, nlohmann::json &json);
+    bool write_json_file(std::string folder, std::string const &file, nlohmann::json const &json);
 
-    std::vector<image_pixel_t> load_image(std::string const& image_path);
-    bool save_screenshot(std::string const& image_path, uint8_t* img_ptr, int32_t width, int32_t height, int32_t channels);
+    std::vector<image_pixel_t> load_image(std::string const &image_path);
+    bool save_screenshot(std::string const &image_path, uint8_t *img_ptr, int32_t width, int32_t height, int32_t channels);
 };
 
 #endif
