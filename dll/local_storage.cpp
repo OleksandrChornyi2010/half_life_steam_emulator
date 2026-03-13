@@ -390,7 +390,7 @@ std::string Local_Storage::get_program_path() {
 }
 
 std::string Local_Storage::get_history_file_path() {
-    return data_path + PATH_SEPARATOR + platform_folder + PATH_SEPARATOR + historyFileName;
+    return get_program_path() + platform_folder + PATH_SEPARATOR + config_folder + PATH_SEPARATOR + historyFileName;
 }
 
 std::string Local_Storage::get_game_settings_path() {

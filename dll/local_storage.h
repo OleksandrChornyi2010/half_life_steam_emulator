@@ -49,6 +49,7 @@ class Local_Storage {
     static constexpr auto screenshots_folder = "screenshots";
     static constexpr auto game_settings_folder = "steam_settings";
     static constexpr auto platform_folder = "platform";
+    static constexpr auto config_folder = "config";
     static constexpr auto historyFileName = "serverbrowser_hist.vdf";
 
   private:
