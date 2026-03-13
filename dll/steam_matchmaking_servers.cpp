@@ -56,8 +56,7 @@ HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, IS
     request.id = id;
     requests.push_back(request);
     PRINT_DEBUG("pushed new request with id: %p", request.id);
-    std::cout << "New server request id: " << request.id
-              << " type: " << request.type << std::endl;
+    std::cout << "New server request id: " << request.id << " type: " << request.type << std::endl;
     if (type == eLANServer)
         ProcessLANServerList(id, requests.size() - 1);
 
@@ -67,8 +66,7 @@ HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, IS
 
     if (type == eInternetServer || type == eSpectatorServer) {
     } else if (type == eHistoryServer || type == eFavoritesServer) {
-        std::thread worker(&Steam_Matchmaking_Servers::RefreshServersFromFile, this,
-                           id, type, requests.size() - 1, type);
+        std::thread worker(&Steam_Matchmaking_Servers::RefreshServersFromFile, this, id, type, requests.size() - 1, type);
         worker.detach();
     }
     return id;
@@ -90,9 +88,15 @@ VDFNode Steam_Matchmaking_Servers::ConvertToNode() {
     auto &filters = root.children["Filters"];
     filters.name = "Filters";
 
+    if (favorite_servers.size() == 0) {
+        ParseServersFile(eFavoritesServer, favorite_servers);
+    }
     auto &favoritesNode = filters.children["favorites"];
     favoritesNode.name = "favorites";
 
+    if (history_servers.size() == 0) {
+        ParseServersFile(eHistoryServer, history_servers);
+    }
     auto &historyNode = filters.children["history"];
     historyNode.name = "history";
 
@@ -280,23 +284,23 @@ HServerListRequest Steam_Matchmaking_Servers::RequestFavoritesServerList(
     uint32 nFilters,
     ISteamMatchmakingServerListResponse *pRequestServersResponse) {
     PRINT_DEBUG("RequestFavoritesServerList\n");
-    if (ppchFilters && nFilters > 0) {
-        std::cout << "--- Filters for AppID " << iApp << " (" << nFilters
-                  << " total) ---" << std::endl;
-        for (uint32 i = 0; i < nFilters; ++i) {
-            if (ppchFilters[i]) {
-                std::cout << "  [" << i << "] Key: \"" << ppchFilters[i]->m_szKey
-                          << "\" | Value: \"" << ppchFilters[i]->m_szValue << "\""
-                          << std::endl;
-            } else {
-                std::cout << "  [" << i << "] Filter pointer is NULL" << std::endl;
+    /*     if (ppchFilters && nFilters > 0) {
+            std::cout << "--- Filters for AppID " << iApp << " (" << nFilters
+                      << " total) ---" << std::endl;
+            for (uint32 i = 0; i < nFilters; ++i) {
+                if (ppchFilters[i]) {
+                    std::cout << "  [" << i << "] Key: \"" << ppchFilters[i]->m_szKey
+                              << "\" | Value: \"" << ppchFilters[i]->m_szValue << "\""
+                              << std::endl;
+                } else {
+                    std::cout << "  [" << i << "] Filter pointer is NULL" << std::endl;
+                }
             }
-        }
-        std::cout << "------------------------------------------" << std::endl;
-    } else {
-        std::cout << "No filters provided for RequestFavoritesServerList."
-                  << std::endl;
-    }
+            std::cout << "------------------------------------------" << std::endl;
+        } else {
+            std::cout << "No filters provided for RequestFavoritesServerList."
+                      << std::endl;
+        } */
     return RequestServerList(iApp, pRequestServersResponse, eFavoritesServer);
 }
 

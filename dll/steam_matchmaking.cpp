@@ -26,39 +26,36 @@
 #define REQUEST_LOBBY_DATA_TIMEOUT 6.0
 #define LOBBY_DELETED_TIMEOUT 2
 
-google::protobuf::Map<std::string,std::string>::const_iterator Steam_Matchmaking::caseinsensitive_find(const ::google::protobuf::Map< ::std::string, ::std::string >& map, std::string key)
-{
+google::protobuf::Map<std::string, std::string>::const_iterator Steam_Matchmaking::caseinsensitive_find(const ::google::protobuf::Map<::std::string, ::std::string> &map, std::string key) {
     auto x = map.begin();
     while (x != map.end()) {
         if (key.size() == x->first.size() && std::equal(x->first.begin(), x->first.end(), key.begin(),
-                      [](char a, char b) {
-                          return tolower(a) == tolower(b);
-                      })) {
-                          break;
-                      }
+                                                        [](char a, char b) {
+                                                            return tolower(a) == tolower(b);
+                                                        })) {
+            break;
+        }
         ++x;
     }
 
     return x;
 }
 
-Lobby *Steam_Matchmaking::get_lobby(CSteamID id)
-{
+Lobby *Steam_Matchmaking::get_lobby(CSteamID id) {
     if (!id.IsLobby())
         return NULL;
 
-    auto lobby = std::find_if(lobbies.begin(), lobbies.end(), [&id](Lobby const& item) { return (item.room_id() & 0xFFFFFFFF) == (id.GetAccountID()); });
+    auto lobby = std::find_if(lobbies.begin(), lobbies.end(), [&id](Lobby const &item) { return (item.room_id() & 0xFFFFFFFF) == (id.GetAccountID()); });
     if (lobbies.end() == lobby)
         return NULL;
 
     return &(*lobby);
 }
 
-void Steam_Matchmaking::send_lobby_data()
-{
+void Steam_Matchmaking::send_lobby_data() {
     PRINT_DEBUG("Sending lobbies %zu\n", lobbies.size());
 
-    for(auto & l: lobbies) {
+    for (auto &l : lobbies) {
         if (get_lobby_member(&l, settings->get_local_steam_id()) && l.owner() == settings->get_local_steam_id().ConvertToUint64() && !l.deleted()) {
             PRINT_DEBUG("Sending lobby %llu\n", l.room_id());
             Common_Message msg = Common_Message();
@@ -69,8 +66,7 @@ void Steam_Matchmaking::send_lobby_data()
     }
 }
 
-void Steam_Matchmaking::trigger_lobby_dataupdate(CSteamID lobby, CSteamID member, bool success, double cb_timeout, bool send_changed_lobby)
-{
+void Steam_Matchmaking::trigger_lobby_dataupdate(CSteamID lobby, CSteamID member, bool success, double cb_timeout, bool send_changed_lobby) {
     PRINT_DEBUG("Lobby dataupdate %llu %llu\n", lobby.ConvertToUint64(), member.ConvertToUint64());
     LobbyDataUpdate_t data;
     memset(&data, 0, sizeof(data));
@@ -82,7 +78,7 @@ void Steam_Matchmaking::trigger_lobby_dataupdate(CSteamID lobby, CSteamID member
 
     if (lobby != member) {
         data.m_ulSteamIDMember = lobby.ConvertToUint64();
-        //Is this really necessary?
+        // Is this really necessary?
         callbacks->addCBResult(data.k_iCallback, &data, sizeof(data), cb_timeout, true);
     }
 
@@ -97,13 +93,12 @@ void Steam_Matchmaking::trigger_lobby_dataupdate(CSteamID lobby, CSteamID member
     }
 }
 
-void Steam_Matchmaking::trigger_lobby_member_join_leave(CSteamID lobby, CSteamID member, bool leaving, bool success, double cb_timeout)
-{
+void Steam_Matchmaking::trigger_lobby_member_join_leave(CSteamID lobby, CSteamID member, bool leaving, bool success, double cb_timeout) {
     LobbyChatUpdate_t data;
     data.m_ulSteamIDLobby = lobby.ConvertToUint64();
     data.m_ulSteamIDUserChanged = member.ConvertToUint64();
     data.m_ulSteamIDMakingChange = member.ConvertToUint64();
-    uint32 member_state_change = 0; //EChatMemberStateChange
+    uint32 member_state_change = 0; // EChatMemberStateChange
 
     if (!leaving) {
         member_state_change |= k_EChatMemberStateChangeEntered;
@@ -114,12 +109,11 @@ void Steam_Matchmaking::trigger_lobby_member_join_leave(CSteamID lobby, CSteamID
     data.m_rgfChatMemberStateChange = member_state_change;
 
     callbacks->addCBResult(data.k_iCallback, &data, sizeof(data), cb_timeout);
-    //trigger_lobby_dataupdate(lobby, member, success, cb_timeout);
+    // trigger_lobby_dataupdate(lobby, member, success, cb_timeout);
     trigger_lobby_dataupdate(lobby, lobby, success, cb_timeout);
 }
 
-bool Steam_Matchmaking::send_owner_packet(CSteamID lobby_id, Lobby_Messages *message)
-{
+bool Steam_Matchmaking::send_owner_packet(CSteamID lobby_id, Lobby_Messages *message) {
     Lobby *lobby = get_lobby(lobby_id);
 
     if (!lobby) {
@@ -134,8 +128,7 @@ bool Steam_Matchmaking::send_owner_packet(CSteamID lobby_id, Lobby_Messages *mes
     return network->sendTo(&msg, true);
 }
 
-bool Steam_Matchmaking::send_clients_packet(CSteamID lobby_id, Lobby_Messages *message)
-{
+bool Steam_Matchmaking::send_clients_packet(CSteamID lobby_id, Lobby_Messages *message) {
     Lobby *lobby = get_lobby(lobby_id);
 
     if (!lobby) {
@@ -149,8 +142,7 @@ bool Steam_Matchmaking::send_clients_packet(CSteamID lobby_id, Lobby_Messages *m
     return network->sendToAllIndividuals(&msg, true);
 }
 
-bool Steam_Matchmaking::send_lobby_members_packet(CSteamID lobby_id, Lobby_Messages *message)
-{
+bool Steam_Matchmaking::send_lobby_members_packet(CSteamID lobby_id, Lobby_Messages *message) {
     Lobby *lobby = get_lobby(lobby_id);
 
     if (!lobby) {
@@ -162,7 +154,7 @@ bool Steam_Matchmaking::send_lobby_members_packet(CSteamID lobby_id, Lobby_Messa
     msg.set_source_id(settings->get_local_steam_id().ConvertToUint64());
     msg.mutable_lobby_messages()->set_id(lobby_id.ConvertToUint64());
 
-    for (auto & m : lobby->members()) {
+    for (auto &m : lobby->members()) {
         msg.set_dest_id((uint64)m.id());
         network->sendTo(&msg, true);
     }
@@ -170,8 +162,7 @@ bool Steam_Matchmaking::send_lobby_members_packet(CSteamID lobby_id, Lobby_Messa
     return true;
 }
 
-bool Steam_Matchmaking::change_owner(Lobby *lobby, CSteamID new_owner)
-{
+bool Steam_Matchmaking::change_owner(Lobby *lobby, CSteamID new_owner) {
     Lobby_Messages *message = new Lobby_Messages();
     message->set_type(Lobby_Messages::CHANGE_OWNER);
     message->set_idata(new_owner.ConvertToUint64());
@@ -181,8 +172,7 @@ bool Steam_Matchmaking::change_owner(Lobby *lobby, CSteamID new_owner)
     return true;
 }
 
-void Steam_Matchmaking::send_gameservercreated_cb(uint64 room_id, uint64 server_id, uint32 ip, uint16 port)
-{
+void Steam_Matchmaking::send_gameservercreated_cb(uint64 room_id, uint64 server_id, uint32 ip, uint16 port) {
     LobbyGameCreated_t data;
     data.m_ulSteamIDLobby = room_id;
     data.m_ulSteamIDGameServer = server_id;
@@ -191,8 +181,7 @@ void Steam_Matchmaking::send_gameservercreated_cb(uint64 room_id, uint64 server_
     callbacks->addCBResult(data.k_iCallback, &data, sizeof(data));
 }
 
-void Steam_Matchmaking::remove_lobbies()
-{
+void Steam_Matchmaking::remove_lobbies() {
     uint64 current_time = std::chrono::duration_cast<std::chrono::duration<uint64>>(std::chrono::system_clock::now().time_since_epoch()).count();
     auto g = std::begin(lobbies);
     while (g != std::end(lobbies)) {
@@ -206,37 +195,34 @@ void Steam_Matchmaking::remove_lobbies()
     }
 }
 
-void Steam_Matchmaking::on_self_enter_leave_lobby(CSteamID id, int type, bool leaving)
-{
-    if (type == k_ELobbyTypeInvisible) return;
+void Steam_Matchmaking::on_self_enter_leave_lobby(CSteamID id, int type, bool leaving) {
+    if (type == k_ELobbyTypeInvisible)
+        return;
     if (!leaving) {
         settings->set_lobby(id);
     } else {
         settings->set_lobby(k_steamIDNil);
     }
 
-    //TODO: handle cases where in two lobbies of type not invisible
-    //steam says a user can only be in one regular lobby but we all know how well documented steam is
+    // TODO: handle cases where in two lobbies of type not invisible
+    // steam says a user can only be in one regular lobby but we all know how well documented steam is
 }
 
-void Steam_Matchmaking::steam_matchmaking_callback(void *object, Common_Message *msg)
-{
+void Steam_Matchmaking::steam_matchmaking_callback(void *object, Common_Message *msg) {
     PRINT_DEBUG("steam_matchmaking_callback\n");
 
     Steam_Matchmaking *steam_matchmaking = (Steam_Matchmaking *)object;
     steam_matchmaking->Callback(msg);
 }
 
-void Steam_Matchmaking::steam_matchmaking_run_every_runcb(void *object)
-{
+void Steam_Matchmaking::steam_matchmaking_run_every_runcb(void *object) {
     PRINT_DEBUG("steam_matchmaking_run_every_runcb\n");
 
     Steam_Matchmaking *steam_matchmaking = (Steam_Matchmaking *)object;
     steam_matchmaking->RunCallbacks();
 }
 
-Steam_Matchmaking::Steam_Matchmaking(class Settings *settings, class Networking *network, class SteamCallResults *callback_results, class SteamCallBacks *callbacks, class RunEveryRunCB *run_every_runcb)
-{
+Steam_Matchmaking::Steam_Matchmaking(class Settings *settings, class Networking *network, class SteamCallResults *callback_results, class SteamCallBacks *callbacks, class RunEveryRunCB *run_every_runcb) {
     this->settings = settings;
     this->network = network;
     this->run_every_runcb = run_every_runcb;
@@ -251,17 +237,16 @@ Steam_Matchmaking::Steam_Matchmaking(class Settings *settings, class Networking 
     searching = false;
 }
 
-Steam_Matchmaking::~Steam_Matchmaking()
-{
-    //TODO rm network callbacks
+Steam_Matchmaking::~Steam_Matchmaking() {
+    // TODO rm network callbacks
     this->run_every_runcb->remove(&Steam_Matchmaking::steam_matchmaking_run_every_runcb, this);
 }
 
-Lobby_Member *Steam_Matchmaking::get_lobby_member(Lobby *lobby, CSteamID user_id)
-{
-    if (!lobby) return NULL;
+Lobby_Member *Steam_Matchmaking::get_lobby_member(Lobby *lobby, CSteamID user_id) {
+    if (!lobby)
+        return NULL;
 
-    auto member = std::find_if(lobby->mutable_members()->begin(), lobby->mutable_members()->end(), [&user_id](Lobby_Member const& item) { return item.id() == user_id.ConvertToUint64(); });
+    auto member = std::find_if(lobby->mutable_members()->begin(), lobby->mutable_members()->end(), [&user_id](Lobby_Member const &item) { return item.id() == user_id.ConvertToUint64(); });
     if (lobby->mutable_members()->end() == member)
         return NULL;
 
@@ -272,11 +257,11 @@ Lobby_Member *Steam_Matchmaking::get_lobby_member(Lobby *lobby, CSteamID user_id
 // saves basic details about a multiplayer game server locally
 
 // returns the number of favorites servers the user has stored
-int Steam_Matchmaking::GetFavoriteGameCount()
-{
+int Steam_Matchmaking::GetFavoriteGameCount() {
     PRINT_DEBUG("GetFavoriteGameCount\n");
     auto &servers = Steam_Matchmaking_Servers::favorite_servers;
-    if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(eFavoritesServer, servers);
+    if (servers.empty())
+        Steam_Matchmaking_Servers::ParseServersFile(eFavoritesServer, servers);
     std::cout << "GetFavoriteGameCount: " << servers.size() << std::endl;
     return servers.size();
 }
@@ -286,60 +271,109 @@ int Steam_Matchmaking::GetFavoriteGameCount()
 // *pnIP, *pnConnPort are filled in the with IP:port of the game server
 // *punFlags specify whether the game server was stored as an explicit favorite or in the history of connections
 // *pRTime32LastPlayedOnServer is filled in the with the Unix time the favorite was added
-bool Steam_Matchmaking::GetFavoriteGame( int iGame, AppId_t *pnAppID, uint32 *pnIP, uint16 *pnConnPort, uint16 *pnQueryPort, uint32 *punFlags, uint32 *pRTime32LastPlayedOnServer )
-{
+bool Steam_Matchmaking::GetFavoriteGame(int iGame, AppId_t *pnAppID, uint32 *pnIP, uint16 *pnConnPort, uint16 *pnQueryPort, uint32 *punFlags, uint32 *pRTime32LastPlayedOnServer) {
     PRINT_DEBUG("GetFavoriteGame\n");
     std::cout << "GetFavoriteGame___ of " << iGame << " :" << std::endl;
-    if (!punFlags || *punFlags == k_unFavoriteFlagNone) return false;
+    if (!punFlags || *punFlags == k_unFavoriteFlagNone)
+        return false;
     auto &servers = *punFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
     EMatchMakingType type = *punFlags == k_unFavoriteFlagHistory ? eHistoryServer : eFavoritesServer;
-    if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(type, servers);
+    if (servers.empty())
+        Steam_Matchmaking_Servers::ParseServersFile(type, servers);
 
     try {
         auto &server = servers.at(iGame);
-        if (pnAppID) *pnAppID = server.gameserver.appid();
-        if (pnIP) *pnIP = server.gameserver.ip();
-        if (pnConnPort) *pnConnPort = server.gameserver.port();
-        if (pnQueryPort) *pnQueryPort = server.gameserver.query_port();
-        if (pRTime32LastPlayedOnServer) *pRTime32LastPlayedOnServer = server.gameserver.last_played();
-        std::cout << "{\n" << "AppID: " << server.gameserver.appid() << std::endl;
+        if (pnAppID)
+            *pnAppID = server.gameserver.appid();
+        if (pnIP)
+            *pnIP = server.gameserver.ip();
+        if (pnConnPort)
+            *pnConnPort = server.gameserver.port();
+        if (pnQueryPort)
+            *pnQueryPort = server.gameserver.query_port();
+        if (pRTime32LastPlayedOnServer)
+            *pRTime32LastPlayedOnServer = server.gameserver.last_played();
+        std::cout << "{\n"
+                  << "AppID: " << server.gameserver.appid() << std::endl;
         std::cout << "Ip: " << server.gameserver.ip() << std::endl;
         std::cout << "Port: " << server.gameserver.port() << " query: " << server.gameserver.query_port() << std::endl;
         std::cout << "lastPlayed: " << server.gameserver.last_played() << "\n}" << std::endl;
-    }
-    catch (const std::out_of_range& e) {
+    } catch (const std::out_of_range &e) {
         return false;
     }
     return true;
 }
 
 // adds the game server to the local list; updates the time played of the server if it already exists in the list
-int Steam_Matchmaking::AddFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer )
-{
+int Steam_Matchmaking::AddFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) {
     PRINT_DEBUG("AddFavoriteGame %lu %lu %hu %hu %lu %lu\n", nAppID, nIP, nConnPort, nQueryPort, unFlags, rTime32LastPlayedOnServer);
-    //TODO: what should this return?
     std::cout << "AddFavoriteGame" << std::endl;
-    return 0;
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    if (unFlags == k_unFavoriteFlagNone)
+        return false;
+    auto &servers = unFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
+    EMatchMakingType type = unFlags == k_unFavoriteFlagHistory ? eHistoryServer : eFavoritesServer;
+    if (servers.empty())
+        Steam_Matchmaking_Servers::ParseServersFile(type, servers);
+
+    std::string path = Local_Storage::get_history_file_path();
+    bool found = false;
+    int index = -1;
+    for (size_t i = 0; i < servers.size(); i++) {
+        auto &server = servers[i];
+        uint32_t network_ip = inet_addr(server.ip.c_str());
+        uint32_t host_ip = ntohl(network_ip);
+        if (host_ip == nIP && server.port == nConnPort) {
+            server.last_played = rTime32LastPlayedOnServer;
+            server.gameserver.set_last_played(rTime32LastPlayedOnServer);
+            found = true;
+            index = i;
+        }
+    }
+    if (!found) {
+        ServerItem item;
+        std::string str_ip = Steam_Matchmaking_Servers::ip_to_string(nIP);
+        item.ip = str_ip;
+        item.port = nConnPort;
+        item.last_played = rTime32LastPlayedOnServer;
+        servers.push_back(item);
+        index = servers.size() - 1;
+        std::cout << "Added new server to list ip: " << str_ip << " port: " << nConnPort << " type(e-matchmaking): " << type << " index: " << index << std::endl;
+    }
+    VDFNode node = Steam_Matchmaking_Servers::ConvertToNode();
+    VDFParser::write(path, node);
+    FavoritesListChanged_t callbackData;
+    callbackData.m_nIP = nIP;
+    callbackData.m_nQueryPort = nQueryPort;
+    callbackData.m_nConnPort = nConnPort;
+    callbackData.m_nAppID = nAppID;
+    callbackData.m_nFlags = unFlags;
+    callbackData.m_bAdd = true;
+    int id = FavoritesListChanged_t::k_iCallback;
+
+    this->callbacks->addCBResult(id, &callbackData, sizeof(callbackData));
+
+    return index;
 }
 
 // removes the game server from the local storage; returns true if one was removed
-bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags )
-{
+bool Steam_Matchmaking::RemoveFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags) {
     PRINT_DEBUG("RemoveFavoriteGame\n");
     std::cout << "RemoveFavoriteGame" << std::endl;
-    if (unFlags == k_unFavoriteFlagNone) return false;
+    if (unFlags == k_unFavoriteFlagNone)
+        return false;
     auto &servers = unFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
     EMatchMakingType type = unFlags == k_unFavoriteFlagHistory ? eHistoryServer : eFavoritesServer;
-    if (servers.empty()) Steam_Matchmaking_Servers::ParseServersFile(type, servers);
+    if (servers.empty())
+        Steam_Matchmaking_Servers::ParseServersFile(type, servers);
     std::string path = Local_Storage::get_history_file_path();
 
-    for (auto it = servers.begin(); it != servers.end(); ) {
+    for (auto it = servers.begin(); it != servers.end();) {
         uint32_t network_ip = inet_addr(it->ip.c_str());
         uint32_t host_ip = ntohl(network_ip);
 
         if (nIP == host_ip && nConnPort == it->port) {
             it = servers.erase(it);
-
             VDFNode node = Steam_Matchmaking_Servers::ConvertToNode();
             VDFParser::write(path, node);
             FavoritesListChanged_t callbackData;
@@ -353,12 +387,10 @@ bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 n
 
             this->callbacks->addCBResult(id, &callbackData, sizeof(callbackData));
 
-            std::cout << "Found and removed" << std::endl;
             return true;
         }
         ++it;
     }
-    std::cout << "Not Found" << std::endl;
     return false;
 }
 
@@ -389,10 +421,9 @@ bool Steam_Matchmaking::RemoveFavoriteGame( AppId_t nAppID, uint32 nIP, uint16 n
     }
 */
 //
-#define LOBBY_SEARCH_TIMEOUT 0.2 //Tested on real steam
-STEAM_CALL_RESULT( LobbyMatchList_t )
-SteamAPICall_t Steam_Matchmaking::RequestLobbyList()
-{
+#define LOBBY_SEARCH_TIMEOUT 0.2 // Tested on real steam
+STEAM_CALL_RESULT(LobbyMatchList_t)
+SteamAPICall_t Steam_Matchmaking::RequestLobbyList() {
     PRINT_DEBUG("RequestLobbyList\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     filtered_lobbies.clear();
@@ -402,27 +433,24 @@ SteamAPICall_t Steam_Matchmaking::RequestLobbyList()
     filter_values.clear();
     filter_max_results = FILTER_MAX_DEFAULT;
     searching = true;
-    if (search_call_api_id) callback_results->rmCallBack(search_call_api_id, NULL);
+    if (search_call_api_id)
+        callback_results->rmCallBack(search_call_api_id, NULL);
     search_call_api_id = callback_results->reserveCallResult();
 
-
-
-    
     return search_call_api_id;
 }
 
-void Steam_Matchmaking::RequestLobbyList_OLD()
-{
+void Steam_Matchmaking::RequestLobbyList_OLD() {
     RequestLobbyList();
 }
 
 // filters for lobbies
 // this needs to be called before RequestLobbyList() to take effect
 // these are cleared on each call to RequestLobbyList()
-void Steam_Matchmaking::AddRequestLobbyListStringFilter( const char *pchKeyToMatch, const char *pchValueToMatch, ELobbyComparison eComparisonType )
-{
+void Steam_Matchmaking::AddRequestLobbyListStringFilter(const char *pchKeyToMatch, const char *pchValueToMatch, ELobbyComparison eComparisonType) {
     PRINT_DEBUG("AddRequestLobbyListStringFilter %s %s %i\n", pchKeyToMatch, pchValueToMatch, eComparisonType);
-    if (!pchValueToMatch) return;
+    if (!pchValueToMatch)
+        return;
 
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     struct Filter_Values fv;
@@ -431,12 +459,10 @@ void Steam_Matchmaking::AddRequestLobbyListStringFilter( const char *pchKeyToMat
     fv.is_int = false;
     fv.eComparisonType = eComparisonType;
     filter_values.push_back(fv);
-
 }
 
 // numerical comparison
-void Steam_Matchmaking::AddRequestLobbyListNumericalFilter( const char *pchKeyToMatch, int nValueToMatch, ELobbyComparison eComparisonType )
-{
+void Steam_Matchmaking::AddRequestLobbyListNumericalFilter(const char *pchKeyToMatch, int nValueToMatch, ELobbyComparison eComparisonType) {
     PRINT_DEBUG("AddRequestLobbyListNumericalFilter %s %i %i\n", pchKeyToMatch, nValueToMatch, eComparisonType);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     struct Filter_Values fv;
@@ -445,88 +471,74 @@ void Steam_Matchmaking::AddRequestLobbyListNumericalFilter( const char *pchKeyTo
     fv.is_int = true;
     fv.eComparisonType = eComparisonType;
     filter_values.push_back(fv);
-
 }
 
 // returns results closest to the specified value. Multiple near filters can be added, with early filters taking precedence
-void Steam_Matchmaking::AddRequestLobbyListNearValueFilter( const char *pchKeyToMatch, int nValueToBeCloseTo )
-{
+void Steam_Matchmaking::AddRequestLobbyListNearValueFilter(const char *pchKeyToMatch, int nValueToBeCloseTo) {
     PRINT_DEBUG("AddRequestLobbyListNearValueFilter %s %u\n", pchKeyToMatch, nValueToBeCloseTo);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
-
-    
 }
 
 // returns only lobbies with the specified number of slots available
-void Steam_Matchmaking::AddRequestLobbyListFilterSlotsAvailable( int nSlotsAvailable )
-{
+void Steam_Matchmaking::AddRequestLobbyListFilterSlotsAvailable(int nSlotsAvailable) {
     PRINT_DEBUG("AddRequestLobbyListFilterSlotsAvailable %i\n", nSlotsAvailable);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 }
 
 // sets the distance for which we should search for lobbies (based on users IP address to location map on the Steam backed)
-void Steam_Matchmaking::AddRequestLobbyListDistanceFilter( ELobbyDistanceFilter eLobbyDistanceFilter )
-{
+void Steam_Matchmaking::AddRequestLobbyListDistanceFilter(ELobbyDistanceFilter eLobbyDistanceFilter) {
     PRINT_DEBUG("AddRequestLobbyListDistanceFilter %i\n", eLobbyDistanceFilter);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 }
 
 // sets how many results to return, the lower the count the faster it is to download the lobby results & details to the client
-void Steam_Matchmaking::AddRequestLobbyListResultCountFilter( int cMaxResults )
-{
+void Steam_Matchmaking::AddRequestLobbyListResultCountFilter(int cMaxResults) {
     PRINT_DEBUG("AddRequestLobbyListResultCountFilter %i\n", cMaxResults);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     filter_max_results = cMaxResults;
 }
 
-
-void Steam_Matchmaking::AddRequestLobbyListCompatibleMembersFilter( CSteamID steamIDLobby )
-{
+void Steam_Matchmaking::AddRequestLobbyListCompatibleMembersFilter(CSteamID steamIDLobby) {
     PRINT_DEBUG("AddRequestLobbyListCompatibleMembersFilter\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 }
 
-void Steam_Matchmaking::AddRequestLobbyListFilter( const char *pchKeyToMatch, const char *pchValueToMatch )
-{
-	AddRequestLobbyListStringFilter(pchKeyToMatch, pchValueToMatch, k_ELobbyComparisonEqual);
+void Steam_Matchmaking::AddRequestLobbyListFilter(const char *pchKeyToMatch, const char *pchValueToMatch) {
+    AddRequestLobbyListStringFilter(pchKeyToMatch, pchValueToMatch, k_ELobbyComparisonEqual);
 }
 
-void Steam_Matchmaking::AddRequestLobbyListNumericalFilter( const char *pchKeyToMatch, int nValueToMatch, int nComparisonType )
-{
-	AddRequestLobbyListNumericalFilter(pchKeyToMatch, nValueToMatch, (ELobbyComparison) nComparisonType );
+void Steam_Matchmaking::AddRequestLobbyListNumericalFilter(const char *pchKeyToMatch, int nValueToMatch, int nComparisonType) {
+    AddRequestLobbyListNumericalFilter(pchKeyToMatch, nValueToMatch, (ELobbyComparison)nComparisonType);
 }
 
-void Steam_Matchmaking::AddRequestLobbyListSlotsAvailableFilter()
-{
-    
+void Steam_Matchmaking::AddRequestLobbyListSlotsAvailableFilter() {
 }
 
 // returns the CSteamID of a lobby, as retrieved by a RequestLobbyList call
 // should only be called after a LobbyMatchList_t callback is received
 // iLobby is of the range [0, LobbyMatchList_t::m_nLobbiesMatching)
 // the returned CSteamID::IsValid() will be false if iLobby is out of range
-CSteamID Steam_Matchmaking::GetLobbyByIndex( int iLobby )
-{
+CSteamID Steam_Matchmaking::GetLobbyByIndex(int iLobby) {
     PRINT_DEBUG("GetLobbyByIndex %i\n", iLobby);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     CSteamID id = k_steamIDNil;
-    if (0 <= iLobby && iLobby < filtered_lobbies.size()) id = filtered_lobbies[iLobby];
+    if (0 <= iLobby && iLobby < filtered_lobbies.size())
+        id = filtered_lobbies[iLobby];
     PRINT_DEBUG("Lobby %llu\n", id.ConvertToUint64());
     return id;
 }
 
-bool Steam_Matchmaking::enter_lobby(Lobby *lobby, CSteamID id)
-{
-    if (get_lobby_member(lobby, id)) return false;
+bool Steam_Matchmaking::enter_lobby(Lobby *lobby, CSteamID id) {
+    if (get_lobby_member(lobby, id))
+        return false;
 
     Lobby_Member *member = lobby->add_members();
     member->set_id(id.ConvertToUint64());
     return true;
 }
 
-bool Steam_Matchmaking::leave_lobby(Lobby *lobby, CSteamID id)
-{
-    auto member = std::find_if(lobby->mutable_members()->begin(), lobby->mutable_members()->end(), [&id](Lobby_Member const& item) { return item.id() == id.ConvertToUint64(); });
+bool Steam_Matchmaking::leave_lobby(Lobby *lobby, CSteamID id) {
+    auto member = std::find_if(lobby->mutable_members()->begin(), lobby->mutable_members()->end(), [&id](Lobby_Member const &item) { return item.id() == id.ConvertToUint64(); });
     if (member != lobby->mutable_members()->end()) {
         lobby->mutable_members()->erase(member);
         return true;
@@ -535,11 +547,9 @@ bool Steam_Matchmaking::leave_lobby(Lobby *lobby, CSteamID id)
     return false;
 }
 
+#define LOBBY_CREATE_DELAY 0.07 // artificial delay for lobby creation
 
-#define LOBBY_CREATE_DELAY 0.07 //artificial delay for lobby creation
-
-void Steam_Matchmaking::Create_pending_lobbies()
-{
+void Steam_Matchmaking::Create_pending_lobbies() {
     auto p_c = std::begin(pending_creates);
     while (p_c != std::end(pending_creates)) {
         if (check_timedout(p_c->created, LOBBY_CREATE_DELAY)) {
@@ -570,7 +580,7 @@ void Steam_Matchmaking::Create_pending_lobbies()
                 {
                     LobbyEnter_t data;
                     data.m_ulSteamIDLobby = lobby.room_id();
-                    data.m_rgfChatPermissions = 0; //Unused - Always 0
+                    data.m_rgfChatPermissions = 0; // Unused - Always 0
                     if (p_c->eLobbyType == k_ELobbyTypePrivate)
                         data.m_bLocked = true;
                     else
@@ -596,9 +606,8 @@ void Steam_Matchmaking::Create_pending_lobbies()
 // this is an asynchronous request
 // results will be returned by LobbyCreated_t callback and call result; lobby is joined & ready to use at this point
 // a LobbyEnter_t callback will also be received (since the local user is joining their own lobby)
-STEAM_CALL_RESULT( LobbyCreated_t )
-SteamAPICall_t Steam_Matchmaking::CreateLobby( ELobbyType eLobbyType, int cMaxMembers )
-{
+STEAM_CALL_RESULT(LobbyCreated_t)
+SteamAPICall_t Steam_Matchmaking::CreateLobby(ELobbyType eLobbyType, int cMaxMembers) {
     PRINT_DEBUG("CreateLobby type: %i max_members: %i\n", eLobbyType, cMaxMembers);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     struct Pending_Creates p_c;
@@ -610,18 +619,15 @@ SteamAPICall_t Steam_Matchmaking::CreateLobby( ELobbyType eLobbyType, int cMaxMe
     return p_c.api_id;
 }
 
-SteamAPICall_t Steam_Matchmaking::CreateLobby( ELobbyType eLobbyType )
-{
-	return CreateLobby(eLobbyType, 0);
+SteamAPICall_t Steam_Matchmaking::CreateLobby(ELobbyType eLobbyType) {
+    return CreateLobby(eLobbyType, 0);
 }
 
-void Steam_Matchmaking::CreateLobby_OLD( ELobbyType eLobbyType )
-{
+void Steam_Matchmaking::CreateLobby_OLD(ELobbyType eLobbyType) {
     CreateLobby(eLobbyType);
 }
 
-void Steam_Matchmaking::CreateLobby( bool bPrivate )
-{
+void Steam_Matchmaking::CreateLobby(bool bPrivate) {
     CreateLobby(bPrivate ? k_ELobbyTypePrivate : k_ELobbyTypePublic);
 }
 
@@ -629,14 +635,14 @@ void Steam_Matchmaking::CreateLobby( bool bPrivate )
 // this is an asynchronous request
 // results will be returned by LobbyEnter_t callback & call result, check m_EChatRoomEnterResponse to see if was successful
 // lobby metadata is available to use immediately on this call completing
-STEAM_CALL_RESULT( LobbyEnter_t )
-SteamAPICall_t Steam_Matchmaking::JoinLobby( CSteamID steamIDLobby )
-{
+STEAM_CALL_RESULT(LobbyEnter_t)
+SteamAPICall_t Steam_Matchmaking::JoinLobby(CSteamID steamIDLobby) {
     PRINT_DEBUG("JoinLobby %llu\n", steamIDLobby.ConvertToUint64());
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 
-    auto pj = std::find_if(pending_joins.begin(), pending_joins.end(), [&steamIDLobby](Pending_Joins const& item) {return item.lobby_id == steamIDLobby;});
-    if (pj != pending_joins.end()) return pj->api_id;
+    auto pj = std::find_if(pending_joins.begin(), pending_joins.end(), [&steamIDLobby](Pending_Joins const &item) { return item.lobby_id == steamIDLobby; });
+    if (pj != pending_joins.end())
+        return pj->api_id;
 
     Pending_Joins pending_join;
     pending_join.api_id = callback_results->reserveCallResult();
@@ -651,15 +657,13 @@ SteamAPICall_t Steam_Matchmaking::JoinLobby( CSteamID steamIDLobby )
     return pending_join.api_id;
 }
 
-void Steam_Matchmaking::JoinLobby_OLD( CSteamID steamIDLobby )
-{
+void Steam_Matchmaking::JoinLobby_OLD(CSteamID steamIDLobby) {
     JoinLobby(steamIDLobby);
 }
 
 // Leave a lobby; this will take effect immediately on the client side
 // other users in the lobby will be notified by a LobbyChatUpdate_t callback
-void Steam_Matchmaking::LeaveLobby( CSteamID steamIDLobby )
-{
+void Steam_Matchmaking::LeaveLobby(CSteamID steamIDLobby) {
     PRINT_DEBUG("LeaveLobby\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     PRINT_DEBUG("LeaveLobby pass mutex\n");
@@ -693,9 +697,7 @@ void Steam_Matchmaking::LeaveLobby( CSteamID steamIDLobby )
     }
 
     PRINT_DEBUG("LeaveLobby Done\n");
-    
 }
-
 
 // Invite another user to the lobby
 // the target user will receive a LobbyInvite_t callback
@@ -703,12 +705,12 @@ void Steam_Matchmaking::LeaveLobby( CSteamID steamIDLobby )
 // returns false if the local user is not connected to the Steam servers
 // if the other user clicks the join link, a GameLobbyJoinRequested_t will be posted if the user is in-game,
 // or if the game isn't running yet the game will be launched with the parameter +connect_lobby <64-bit lobby id>
-bool Steam_Matchmaking::InviteUserToLobby( CSteamID steamIDLobby, CSteamID steamIDInvitee )
-{
+bool Steam_Matchmaking::InviteUserToLobby(CSteamID steamIDLobby, CSteamID steamIDInvitee) {
     PRINT_DEBUG("InviteUserToLobby\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
-    if (!lobby) return false;
+    if (!lobby)
+        return false;
 
     Common_Message msg;
     Friend_Messages *friend_messages = new Friend_Messages();
@@ -720,20 +722,19 @@ bool Steam_Matchmaking::InviteUserToLobby( CSteamID steamIDLobby, CSteamID steam
     return network->sendTo(&msg, true);
 }
 
-
 // Lobby iteration, for viewing details of users in a lobby
 // only accessible if the lobby user is a member of the specified lobby
 // persona information for other lobby members (name, avatar, etc.) will be asynchronously received
 // and accessible via ISteamFriends interface
 
 // returns the number of users in the specified lobby
-int Steam_Matchmaking::GetNumLobbyMembers( CSteamID steamIDLobby )
-{
+int Steam_Matchmaking::GetNumLobbyMembers(CSteamID steamIDLobby) {
     PRINT_DEBUG("GetNumLobbyMembers %llu\n", steamIDLobby.ConvertToUint64());
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     int ret = 0;
-    if (lobby) ret = lobby->members().size();
+    if (lobby)
+        ret = lobby->members().size();
 
     PRINT_DEBUG("Number: %i\n", ret);
     return ret;
@@ -742,31 +743,31 @@ int Steam_Matchmaking::GetNumLobbyMembers( CSteamID steamIDLobby )
 // returns the CSteamID of a user in the lobby
 // iMember is of range [0,GetNumLobbyMembers())
 // note that the current user must be in a lobby to retrieve CSteamIDs of other users in that lobby
-CSteamID Steam_Matchmaking::GetLobbyMemberByIndex( CSteamID steamIDLobby, int iMember )
-{
+CSteamID Steam_Matchmaking::GetLobbyMemberByIndex(CSteamID steamIDLobby, int iMember) {
     PRINT_DEBUG("GetLobbyMemberByIndex %llu %i\n", steamIDLobby.ConvertToUint64(), iMember);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     CSteamID id = k_steamIDNil;
-    if (lobby && !lobby->deleted() && lobby->members().size() > iMember && iMember >= 0) id = (uint64)lobby->members(iMember).id();
+    if (lobby && !lobby->deleted() && lobby->members().size() > iMember && iMember >= 0)
+        id = (uint64)lobby->members(iMember).id();
     PRINT_DEBUG("Member: %llu\n", id.ConvertToUint64());
     return id;
 }
 
-
 // Get data associated with this lobby
 // takes a simple key, and returns the string associated with it
 // "" will be returned if no value is set, or if steamIDLobby is invalid
-const char *Steam_Matchmaking::GetLobbyData( CSteamID steamIDLobby, const char *pchKey )
-{
+const char *Steam_Matchmaking::GetLobbyData(CSteamID steamIDLobby, const char *pchKey) {
     PRINT_DEBUG("GetLobbyData %llu %s\n", steamIDLobby.ConvertToUint64(), pchKey);
-    if (!pchKey) return "";
+    if (!pchKey)
+        return "";
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     const char *ret = "";
     if (lobby) {
         auto result = caseinsensitive_find(lobby->values(), pchKey);
-        if (result != lobby->values().end()) ret = result->second.c_str();
+        if (result != lobby->values().end())
+            ret = result->second.c_str();
     }
 
     PRINT_DEBUG("returned %s\n", ret);
@@ -778,12 +779,13 @@ const char *Steam_Matchmaking::GetLobbyData( CSteamID steamIDLobby, const char *
 // this can be used to set lobby names, map, etc.
 // to reset a key, just set it to ""
 // other users in the lobby will receive notification of the lobby data change via a LobbyDataUpdate_t callback
-bool Steam_Matchmaking::SetLobbyData( CSteamID steamIDLobby, const char *pchKey, const char *pchValue )
-{
+bool Steam_Matchmaking::SetLobbyData(CSteamID steamIDLobby, const char *pchKey, const char *pchValue) {
     PRINT_DEBUG("SetLobbyData %llu %s %s\n", steamIDLobby.ConvertToUint64(), pchKey, pchValue);
-    if (!pchKey) return false;
+    if (!pchKey)
+        return false;
     char empty_string[] = "";
-    if (!pchValue) pchValue = empty_string;
+    if (!pchValue)
+        pchValue = empty_string;
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
 
     Lobby *lobby = get_lobby(steamIDLobby);
@@ -792,13 +794,14 @@ bool Steam_Matchmaking::SetLobbyData( CSteamID steamIDLobby, const char *pchKey,
     }
 
     bool changed = true;
-    //callback is always triggered when setlobbydata is called from non owner however no data is actually changed.
+    // callback is always triggered when setlobbydata is called from non owner however no data is actually changed.
     if (lobby->owner() == settings->get_local_steam_id().ConvertToUint64()) {
         auto result = caseinsensitive_find(lobby->values(), pchKey);
         if (result == lobby->values().end()) {
             (*lobby->mutable_values())[pchKey] = pchValue;
         } else {
-            if (result->second == std::string(pchValue)) changed = false;
+            if (result->second == std::string(pchValue))
+                changed = false;
             (*lobby->mutable_values())[result->first] = pchValue;
         }
     }
@@ -809,24 +812,20 @@ bool Steam_Matchmaking::SetLobbyData( CSteamID steamIDLobby, const char *pchKey,
     return true;
 }
 
-
 // returns the number of metadata keys set on the specified lobby
-int Steam_Matchmaking::GetLobbyDataCount( CSteamID steamIDLobby )
-{
+int Steam_Matchmaking::GetLobbyDataCount(CSteamID steamIDLobby) {
     PRINT_DEBUG("GetLobbyDataCount\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     int size = 0;
-    if (lobby) size = lobby->values().size();
+    if (lobby)
+        size = lobby->values().size();
 
-    
     return size;
 }
 
-
 // returns a lobby metadata key/values pair by index, of range [0, GetLobbyDataCount())
-bool Steam_Matchmaking::GetLobbyDataByIndex( CSteamID steamIDLobby, int iLobbyData, char *pchKey, int cchKeyBufferSize, char *pchValue, int cchValueBufferSize )
-{
+bool Steam_Matchmaking::GetLobbyDataByIndex(CSteamID steamIDLobby, int iLobbyData, char *pchKey, int cchKeyBufferSize, char *pchValue, int cchValueBufferSize) {
     PRINT_DEBUG("GetLobbyDataByIndex\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
@@ -834,25 +833,25 @@ bool Steam_Matchmaking::GetLobbyDataByIndex( CSteamID steamIDLobby, int iLobbyDa
 
     if (lobby && lobby->values().size() > iLobbyData && iLobbyData >= 0) {
         auto lobby_data = lobby->values().begin();
-        for (int i = 0; i < iLobbyData; ++i) ++lobby_data;
-        if (cchKeyBufferSize) strncpy(pchKey, lobby_data->first.c_str(), cchKeyBufferSize - 1);
+        for (int i = 0; i < iLobbyData; ++i)
+            ++lobby_data;
+        if (cchKeyBufferSize)
+            strncpy(pchKey, lobby_data->first.c_str(), cchKeyBufferSize - 1);
         pchKey[cchKeyBufferSize - 1] = 0;
 
-        if (cchValueBufferSize) strncpy(pchValue, lobby_data->second.c_str(), cchValueBufferSize - 1);
+        if (cchValueBufferSize)
+            strncpy(pchValue, lobby_data->second.c_str(), cchValueBufferSize - 1);
         pchValue[cchValueBufferSize - 1] = 0;
 
         PRINT_DEBUG("GetLobbyDataByIndex ret %s %s\n", pchKey, pchValue);
         ret = true;
     }
 
-    
     return ret;
 }
 
-
 // removes a metadata key from the lobby
-bool Steam_Matchmaking::DeleteLobbyData( CSteamID steamIDLobby, const char *pchKey )
-{
+bool Steam_Matchmaking::DeleteLobbyData(CSteamID steamIDLobby, const char *pchKey) {
     PRINT_DEBUG("DeleteLobbyData\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
@@ -862,16 +861,15 @@ bool Steam_Matchmaking::DeleteLobbyData( CSteamID steamIDLobby, const char *pchK
 
     lobby->mutable_values()->erase(pchKey);
     trigger_lobby_dataupdate(steamIDLobby, steamIDLobby, true);
-    
+
     return true;
 }
 
-
 // Gets per-user metadata for someone in this lobby
-const char *Steam_Matchmaking::GetLobbyMemberData( CSteamID steamIDLobby, CSteamID steamIDUser, const char *pchKey )
-{
+const char *Steam_Matchmaking::GetLobbyMemberData(CSteamID steamIDLobby, CSteamID steamIDUser, const char *pchKey) {
     PRINT_DEBUG("GetLobbyMemberData %s %llu %llu\n", pchKey, steamIDLobby.ConvertToUint64(), steamIDUser.ConvertToUint64());
-    if (!pchKey) return "";
+    if (!pchKey)
+        return "";
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     struct Lobby_Member *member = get_lobby_member(get_lobby(steamIDLobby), steamIDUser);
     const char *ret = "";
@@ -886,7 +884,8 @@ const char *Steam_Matchmaking::GetLobbyMemberData( CSteamID steamIDLobby, CSteam
             }
         } else {
             auto result = caseinsensitive_find(member->values(), std::string(pchKey));
-            if (result == member->values().end()) return "";
+            if (result == member->values().end())
+                return "";
             ret = result->second.c_str();
         }
     }
@@ -896,16 +895,18 @@ const char *Steam_Matchmaking::GetLobbyMemberData( CSteamID steamIDLobby, CSteam
 }
 
 // Sets per-user metadata (for the local user implicitly)
-void Steam_Matchmaking::SetLobbyMemberData( CSteamID steamIDLobby, const char *pchKey, const char *pchValue )
-{
+void Steam_Matchmaking::SetLobbyMemberData(CSteamID steamIDLobby, const char *pchKey, const char *pchValue) {
     PRINT_DEBUG("SetLobbyMemberData %s %s\n", pchKey, pchValue);
-    if (!pchKey) return;
+    if (!pchKey)
+        return;
     char empty_string[] = "";
-    if (!pchValue) pchValue = empty_string;
+    if (!pchValue)
+        pchValue = empty_string;
 
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
-    if (!lobby || lobby->deleted()) return;
+    if (!lobby || lobby->deleted())
+        return;
 
     Lobby_Member *member = get_lobby_member(lobby, settings->get_local_steam_id());
     if (member) {
@@ -940,18 +941,17 @@ void Steam_Matchmaking::SetLobbyMemberData( CSteamID steamIDLobby, const char *p
     }
 }
 
-
 // Broadcasts a chat message to the all the users in the lobby
 // users in the lobby (including the local user) will receive a LobbyChatMsg_t callback
 // returns true if the message is successfully sent
 // pvMsgBody can be binary or text data, up to 4k
 // if pvMsgBody is text, cubMsgBody should be strlen( text ) + 1, to include the null terminator
-bool Steam_Matchmaking::SendLobbyChatMsg( CSteamID steamIDLobby, const void *pvMsgBody, int cubMsgBody )
-{
+bool Steam_Matchmaking::SendLobbyChatMsg(CSteamID steamIDLobby, const void *pvMsgBody, int cubMsgBody) {
     PRINT_DEBUG("SendLobbyChatMsg %i\n", cubMsgBody);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
-    if (!lobby || lobby->deleted()) return false;
+    if (!lobby || lobby->deleted())
+        return false;
 
     Lobby_Messages *message = new Lobby_Messages();
     message->set_type(Lobby_Messages::CHAT_MESSAGE);
@@ -964,14 +964,17 @@ bool Steam_Matchmaking::SendLobbyChatMsg( CSteamID steamIDLobby, const void *pvM
 // *pSteamIDUser is filled in with the CSteamID of the member
 // *pvData is filled in with the message itself
 // return value is the number of bytes written into the buffer
-int Steam_Matchmaking::GetLobbyChatEntry( CSteamID steamIDLobby, int iChatID, STEAM_OUT_STRUCT() CSteamID *pSteamIDUser, void *pvData, int cubData, EChatEntryType *peChatEntryType )
-{
+int Steam_Matchmaking::GetLobbyChatEntry(CSteamID steamIDLobby, int iChatID, STEAM_OUT_STRUCT() CSteamID *pSteamIDUser, void *pvData, int cubData, EChatEntryType *peChatEntryType) {
     PRINT_DEBUG("GetLobbyChatEntry %llu %i %p %p %i %p\n", steamIDLobby.ConvertToUint64(), iChatID, pSteamIDUser, pvData, cubData, peChatEntryType);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
-    if (iChatID >= chat_entries.size() || iChatID < 0 || cubData < 0) return 0;
-    if (chat_entries[iChatID].lobby_id != steamIDLobby) return 0;
-    if (pSteamIDUser) *pSteamIDUser = chat_entries[iChatID].user_id;
-    if (peChatEntryType) *peChatEntryType = chat_entries[iChatID].type;
+    if (iChatID >= chat_entries.size() || iChatID < 0 || cubData < 0)
+        return 0;
+    if (chat_entries[iChatID].lobby_id != steamIDLobby)
+        return 0;
+    if (pSteamIDUser)
+        *pSteamIDUser = chat_entries[iChatID].user_id;
+    if (peChatEntryType)
+        *peChatEntryType = chat_entries[iChatID].type;
     if (pvData) {
         if (chat_entries[iChatID].message.size() <= cubData) {
             cubData = chat_entries[iChatID].message.size();
@@ -984,7 +987,6 @@ int Steam_Matchmaking::GetLobbyChatEntry( CSteamID steamIDLobby, int iChatID, ST
     return 0;
 }
 
-
 // Refreshes metadata for a lobby you're not necessarily in right now
 // you never do this for lobbies you're a member of, only if your
 // this will send down all the metadata associated with a lobby
@@ -992,8 +994,7 @@ int Steam_Matchmaking::GetLobbyChatEntry( CSteamID steamIDLobby, int iChatID, ST
 // returns false if the local user is not connected to the Steam servers
 // results will be returned by a LobbyDataUpdate_t callback
 // if the specified lobby doesn't exist, LobbyDataUpdate_t::m_bSuccess will be set to false
-bool Steam_Matchmaking::RequestLobbyData( CSteamID steamIDLobby )
-{
+bool Steam_Matchmaking::RequestLobbyData(CSteamID steamIDLobby) {
     PRINT_DEBUG("RequestLobbyData\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     struct Data_Requested requested;
@@ -1006,13 +1007,13 @@ bool Steam_Matchmaking::RequestLobbyData( CSteamID steamIDLobby )
 // sets the game server associated with the lobby
 // usually at this point, the users will join the specified game server
 // either the IP/Port or the steamID of the game server has to be valid, depending on how you want the clients to be able to connect
-void Steam_Matchmaking::SetLobbyGameServer( CSteamID steamIDLobby, uint32 unGameServerIP, uint16 unGameServerPort, CSteamID steamIDGameServer )
-{
+void Steam_Matchmaking::SetLobbyGameServer(CSteamID steamIDLobby, uint32 unGameServerIP, uint16 unGameServerPort, CSteamID steamIDGameServer) {
     PRINT_DEBUG("SetLobbyGameServer %llu %llu %hhu.%hhu.%hhu.%hhu:%hu\n", steamIDLobby.ConvertToUint64(), steamIDGameServer.ConvertToUint64(), ((unsigned char *)&unGameServerIP)[3], ((unsigned char *)&unGameServerIP)[2], ((unsigned char *)&unGameServerIP)[1], ((unsigned char *)&unGameServerIP)[0], unGameServerPort);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     if (lobby) {
-        if (lobby->deleted()) return;
+        if (lobby->deleted())
+            return;
 
         lobby->mutable_gameserver()->set_id(steamIDGameServer.ConvertToUint64());
         lobby->mutable_gameserver()->set_ip(unGameServerIP);
@@ -1022,74 +1023,69 @@ void Steam_Matchmaking::SetLobbyGameServer( CSteamID steamIDLobby, uint32 unGame
         send_gameservercreated_cb(lobby->room_id(), lobby->gameserver().id(), lobby->gameserver().ip(), lobby->gameserver().port());
         trigger_lobby_dataupdate(steamIDLobby, steamIDLobby, true);
     }
-
-    
 }
 
 // returns the details of a game server set in a lobby - returns false if there is no game server set, or that lobby doesn't exist
-bool Steam_Matchmaking::GetLobbyGameServer( CSteamID steamIDLobby, uint32 *punGameServerIP, uint16 *punGameServerPort, STEAM_OUT_STRUCT() CSteamID *psteamIDGameServer )
-{
+bool Steam_Matchmaking::GetLobbyGameServer(CSteamID steamIDLobby, uint32 *punGameServerIP, uint16 *punGameServerPort, STEAM_OUT_STRUCT() CSteamID *psteamIDGameServer) {
     PRINT_DEBUG("GetLobbyGameServer\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     if (!lobby) {
-        
+
         return false;
     }
 
     CSteamID server_id((uint64)lobby->gameserver().id());
     if (server_id.IsValid() || lobby->gameserver().port()) {
-        if (psteamIDGameServer) *psteamIDGameServer = server_id;
-        if (punGameServerIP) *punGameServerIP = lobby->gameserver().ip();
-        if (punGameServerPort) *punGameServerPort = lobby->gameserver().port();
-        
+        if (psteamIDGameServer)
+            *psteamIDGameServer = server_id;
+        if (punGameServerIP)
+            *punGameServerIP = lobby->gameserver().ip();
+        if (punGameServerPort)
+            *punGameServerPort = lobby->gameserver().port();
+
         return true;
     }
 
-    
     return false;
 }
 
-
 // set the limit on the # of users who can join the lobby
-bool Steam_Matchmaking::SetLobbyMemberLimit( CSteamID steamIDLobby, int cMaxMembers )
-{
+bool Steam_Matchmaking::SetLobbyMemberLimit(CSteamID steamIDLobby, int cMaxMembers) {
     PRINT_DEBUG("SetLobbyMemberLimit\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     if (!lobby || lobby->owner() != settings->get_local_steam_id().ConvertToUint64() || lobby->deleted()) {
-        
+
         return false;
     }
 
     lobby->set_member_limit(cMaxMembers);
     trigger_lobby_dataupdate(steamIDLobby, steamIDLobby, true);
-    
+
     return true;
 }
 
 // returns the current limit on the # of users who can join the lobby; returns 0 if no limit is defined
-int Steam_Matchmaking::GetLobbyMemberLimit( CSteamID steamIDLobby )
-{
+int Steam_Matchmaking::GetLobbyMemberLimit(CSteamID steamIDLobby) {
     PRINT_DEBUG("GetLobbyMemberLimit\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
     int limit = 0;
-    if (lobby) limit = lobby->member_limit();
+    if (lobby)
+        limit = lobby->member_limit();
 
-    PRINT_DEBUG("limit %i\n", limit);    
+    PRINT_DEBUG("limit %i\n", limit);
     return limit;
 }
 
-void Steam_Matchmaking::SetLobbyVoiceEnabled( CSteamID steamIDLobby, bool bVoiceEnabled )
-{
+void Steam_Matchmaking::SetLobbyVoiceEnabled(CSteamID steamIDLobby, bool bVoiceEnabled) {
     PRINT_DEBUG("SetLobbyVoiceEnabled\n");
 }
 
 // updates which type of lobby it is
 // only lobbies that are k_ELobbyTypePublic or k_ELobbyTypeInvisible, and are set to joinable, will be returned by RequestLobbyList() calls
-bool Steam_Matchmaking::SetLobbyType( CSteamID steamIDLobby, ELobbyType eLobbyType )
-{
+bool Steam_Matchmaking::SetLobbyType(CSteamID steamIDLobby, ELobbyType eLobbyType) {
     PRINT_DEBUG("SetLobbyType %i\n", eLobbyType);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
@@ -1098,9 +1094,11 @@ bool Steam_Matchmaking::SetLobbyType( CSteamID steamIDLobby, ELobbyType eLobbyTy
     }
 
     if (lobby->type() != eLobbyType) {
-        //maybe rename those functions?
-        if (lobby->type() == k_ELobbyTypeInvisible) on_self_enter_leave_lobby(steamIDLobby, eLobbyType, false);
-        if (eLobbyType == k_ELobbyTypeInvisible) on_self_enter_leave_lobby(steamIDLobby, lobby->type(), true);
+        // maybe rename those functions?
+        if (lobby->type() == k_ELobbyTypeInvisible)
+            on_self_enter_leave_lobby(steamIDLobby, eLobbyType, false);
+        if (eLobbyType == k_ELobbyTypeInvisible)
+            on_self_enter_leave_lobby(steamIDLobby, lobby->type(), true);
 
         lobby->set_type(eLobbyType);
         trigger_lobby_dataupdate(steamIDLobby, steamIDLobby, true);
@@ -1109,11 +1107,9 @@ bool Steam_Matchmaking::SetLobbyType( CSteamID steamIDLobby, ELobbyType eLobbyTy
     return true;
 }
 
-
 // sets whether or not a lobby is joinable - defaults to true for a new lobby
 // if set to false, no user can join, even if they are a friend or have been invited
-bool Steam_Matchmaking::SetLobbyJoinable( CSteamID steamIDLobby, bool bLobbyJoinable )
-{
+bool Steam_Matchmaking::SetLobbyJoinable(CSteamID steamIDLobby, bool bLobbyJoinable) {
     PRINT_DEBUG("SetLobbyJoinable %u\n", bLobbyJoinable);
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
@@ -1129,19 +1125,18 @@ bool Steam_Matchmaking::SetLobbyJoinable( CSteamID steamIDLobby, bool bLobbyJoin
     return true;
 }
 
-
 // returns the current lobby owner
 // you must be a member of the lobby to access this (Mr_Goldberg note: This is a lie)
 // there always one lobby owner - if the current owner leaves, another user will become the owner
 // it is possible (bur rare) to join a lobby just as the owner is leaving, thus entering a lobby with self as the owner
-CSteamID Steam_Matchmaking::GetLobbyOwner( CSteamID steamIDLobby )
-{
+CSteamID Steam_Matchmaking::GetLobbyOwner(CSteamID steamIDLobby) {
     PRINT_DEBUG("GetLobbyOwner %llu\n", steamIDLobby.ConvertToUint64());
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
-    if (!lobby || lobby->deleted()) return k_steamIDNil;
+    if (!lobby || lobby->deleted())
+        return k_steamIDNil;
 
-    //TODO: might be better to require the lobby info to be at least requested first.
+    // TODO: might be better to require the lobby info to be at least requested first.
     return (uint64)lobby->owner();
 }
 
@@ -1149,16 +1144,14 @@ CSteamID Steam_Matchmaking::GetLobbyOwner( CSteamID steamIDLobby )
 // returns results by posting one RequestFriendsLobbiesResponse_t callback per friend/lobby pair
 // if no friends are in lobbies, RequestFriendsLobbiesResponse_t will be posted but with 0 results
 // filters don't apply to lobbies (currently)
-bool Steam_Matchmaking::RequestFriendsLobbies()
-{
+bool Steam_Matchmaking::RequestFriendsLobbies() {
     PRINT_DEBUG("RequestFriendsLobbies\n");
     RequestFriendsLobbiesResponse_t data = {};
     callbacks->addCBResult(data.k_iCallback, &data, sizeof(data));
     return true;
 }
 
-float Steam_Matchmaking::GetLobbyDistance( CSteamID steamIDLobby )
-{
+float Steam_Matchmaking::GetLobbyDistance(CSteamID steamIDLobby) {
     PRINT_DEBUG("GetLobbyDistance %llu\n", steamIDLobby.ConvertToUint64());
     return 0.0;
 }
@@ -1166,35 +1159,31 @@ float Steam_Matchmaking::GetLobbyDistance( CSteamID steamIDLobby )
 // changes who the lobby owner is
 // you must be the lobby owner for this to succeed, and steamIDNewOwner must be in the lobby
 // after completion, the local user will no longer be the owner
-bool Steam_Matchmaking::SetLobbyOwner( CSteamID steamIDLobby, CSteamID steamIDNewOwner )
-{
+bool Steam_Matchmaking::SetLobbyOwner(CSteamID steamIDLobby, CSteamID steamIDNewOwner) {
     PRINT_DEBUG("SetLobbyOwner\n");
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     Lobby *lobby = get_lobby(steamIDLobby);
-    if (!lobby || lobby->owner() != settings->get_local_steam_id().ConvertToUint64() || lobby->deleted()) return false;
+    if (!lobby || lobby->owner() != settings->get_local_steam_id().ConvertToUint64() || lobby->deleted())
+        return false;
     Lobby_Member *member = get_lobby_member(lobby, steamIDNewOwner);
     if (member) {
         change_owner(&(*lobby), (uint64)member->id());
         trigger_lobby_dataupdate(steamIDLobby, steamIDLobby, true);
-        
+
         return true;
     }
 
-    
     return false;
 }
 
-
 // link two lobbies for the purposes of checking player compatibility
 // you must be the lobby owner of both lobbies
-bool Steam_Matchmaking::SetLinkedLobby( CSteamID steamIDLobby, CSteamID steamIDLobbyDependent )
-{
+bool Steam_Matchmaking::SetLinkedLobby(CSteamID steamIDLobby, CSteamID steamIDLobbyDependent) {
     PRINT_DEBUG("SetLinkedLobby\n");
     return false;
 }
 
-void Steam_Matchmaking::RunBackground()
-{
+void Steam_Matchmaking::RunBackground() {
     remove_lobbies();
     Create_pending_lobbies();
 
@@ -1204,26 +1193,25 @@ void Steam_Matchmaking::RunBackground()
     }
 }
 
-void Steam_Matchmaking::RunCallbacks()
-{
+void Steam_Matchmaking::RunCallbacks() {
     RunBackground();
 
     if (searching) {
         PRINT_DEBUG("Searching for lobbies %zu\n", lobbies.size());
-        for(auto & l: lobbies) {
+        for (auto &l : lobbies) {
             bool use = l.joinable() && (l.type() == k_ELobbyTypePublic || l.type() == k_ELobbyTypeInvisible || l.type() == k_ELobbyTypeFriendsOnly) && !l.deleted();
             PRINT_DEBUG("use lobby: %u, filters: %zu, joinable: %u, type: %u, deleted: %u\n", use, filter_values_copy.size(), l.joinable(), l.type(), l.deleted());
-            for (auto & f : filter_values_copy) {
+            for (auto &f : filter_values_copy) {
                 PRINT_DEBUG("%s:%s/%i %u %i\n", f.key.c_str(), f.value_string.c_str(), f.value_int, f.is_int, f.eComparisonType);
                 auto value = caseinsensitive_find(l.values(), f.key);
                 if (value != l.values().end()) {
-                    //TODO: eComparisonType
+                    // TODO: eComparisonType
                     if (!f.is_int) {
                         PRINT_DEBUG("Compare Values %s %s\n", value->second.c_str(), f.value_string.c_str());
                         if (f.eComparisonType == k_ELobbyComparisonEqual) {
                             if (value->second == f.value_string) {
                                 PRINT_DEBUG("Equal\n");
-                                //use = use;
+                                // use = use;
                             } else {
                                 PRINT_DEBUG("Not Equal\n");
                                 use = false;
@@ -1233,7 +1221,7 @@ void Steam_Matchmaking::RunCallbacks()
                         try {
                             PRINT_DEBUG("%s\n", value->second.c_str());
                             int compare_to = 0;
-                            //TODO: check if this is how real steam behaves
+                            // TODO: check if this is how real steam behaves
                             if (value->second.size()) {
                                 compare_to = std::stoll(value->second, 0, 0);
                             }
@@ -1241,29 +1229,30 @@ void Steam_Matchmaking::RunCallbacks()
                             if (f.eComparisonType == k_ELobbyComparisonEqual) {
                                 if (compare_to == f.value_int) {
                                     PRINT_DEBUG("Equal\n");
-                                    //use = use;
+                                    // use = use;
                                 } else {
                                     PRINT_DEBUG("Not Equal\n");
                                     use = false;
                                 }
                             }
                         } catch (...) {
-                            //Same case as if the key is not in the lobby?
+                            // Same case as if the key is not in the lobby?
                             use = false;
                         }
-                        //TODO: add more comparisons
+                        // TODO: add more comparisons
                     }
                 } else {
                     PRINT_DEBUG("Compare Key not in lobby\n");
                     if (f.eComparisonType == k_ELobbyComparisonEqual) {
-                        //If the key is not in the lobby do we take it into account?
+                        // If the key is not in the lobby do we take it into account?
                         use = false;
                     }
                 }
             }
 
             PRINT_DEBUG("Lobby %llu use %u\n", l.room_id(), use);
-            if (use) PUSH_BACK_IF_NOT_IN(filtered_lobbies, (uint64)l.room_id());
+            if (use)
+                PUSH_BACK_IF_NOT_IN(filtered_lobbies, (uint64)l.room_id());
             if (filtered_lobbies.size() >= filter_max_results_copy) {
                 searching = false;
                 LobbyMatchList_t data;
@@ -1298,7 +1287,7 @@ void Steam_Matchmaking::RunCallbacks()
         if (lobby && lobby->deleted()) {
             LobbyEnter_t data;
             data.m_ulSteamIDLobby = lobby->room_id();
-            data.m_rgfChatPermissions = 0; //Unused - Always 0
+            data.m_rgfChatPermissions = 0; // Unused - Always 0
             data.m_bLocked = false;
             data.m_EChatRoomEnterResponse = k_EChatRoomEnterResponseDoesntExist;
             callback_results->addCallResult(g->api_id, data.k_iCallback, &data, sizeof(data));
@@ -1306,10 +1295,10 @@ void Steam_Matchmaking::RunCallbacks()
             g = pending_joins.erase(g);
         } else
 
-        if (get_lobby_member(lobby, settings->get_local_steam_id())) {
+            if (get_lobby_member(lobby, settings->get_local_steam_id())) {
             LobbyEnter_t data;
             data.m_ulSteamIDLobby = lobby->room_id();
-            data.m_rgfChatPermissions = 0; //Unused - Always 0
+            data.m_rgfChatPermissions = 0; // Unused - Always 0
             data.m_bLocked = false;
             data.m_EChatRoomEnterResponse = k_EChatRoomEnterResponseSuccess;
             callback_results->addCallResult(g->api_id, data.k_iCallback, &data, sizeof(data));
@@ -1318,10 +1307,10 @@ void Steam_Matchmaking::RunCallbacks()
             trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)lobby->room_id(), true);
         } else
 
-        if (check_timedout(g->joined, PENDING_JOIN_TIMEOUT)) {
+            if (check_timedout(g->joined, PENDING_JOIN_TIMEOUT)) {
             LobbyEnter_t data;
             data.m_ulSteamIDLobby = g->lobby_id.ConvertToUint64();
-            data.m_rgfChatPermissions = 0; //Unused - Always 0
+            data.m_rgfChatPermissions = 0; // Unused - Always 0
             data.m_bLocked = false;
             data.m_EChatRoomEnterResponse = k_EChatRoomEnterResponseDoesntExist;
             callback_results->addCallResult(g->api_id, data.k_iCallback, &data, sizeof(data));
@@ -1332,7 +1321,6 @@ void Steam_Matchmaking::RunCallbacks()
             ++g;
         }
     }
-
 
     auto dr = std::begin(data_requested);
     while (dr != std::end(data_requested)) {
@@ -1352,10 +1340,7 @@ void Steam_Matchmaking::RunCallbacks()
     }
 }
 
-
-
-void Steam_Matchmaking::Callback(Common_Message *msg)
-{
+void Steam_Matchmaking::Callback(Common_Message *msg) {
     if (msg->has_lobby()) {
         PRINT_DEBUG("GOT A LOBBY appid: %lu\n", msg->lobby().appid());
         if (msg->lobby().owner() != settings->get_local_steam_id().ConvertToUint64() && msg->lobby().appid() == settings->get_local_game_id().AppID()) {
@@ -1370,9 +1355,10 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
             if (!lobby->deleted()) {
                 if (!protobuf_message_equal(*lobby, msg->lobby())) {
                     bool we_are_in_lobby = !!get_lobby_member(lobby, settings->get_local_steam_id());
-                    if (we_are_in_lobby) trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)lobby->room_id(), true);
+                    if (we_are_in_lobby)
+                        trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)lobby->room_id(), true);
 
-                    for (auto & m : lobby->members()) {
+                    for (auto &m : lobby->members()) {
                         int count = 0;
                         Lobby_Member *member = get_lobby_member(msg->mutable_lobby(), (uint64)m.id());
 
@@ -1386,7 +1372,7 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
                     }
 
                     bool joined = false;
-                    for (auto & m : msg->lobby().members()) {
+                    for (auto &m : msg->lobby().members()) {
                         Lobby_Member *member = get_lobby_member(lobby, (uint64)m.id());
                         if (!member) {
                             if (m.id() == settings->get_local_steam_id().ConvertToUint64()) {
@@ -1397,7 +1383,7 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
                                         bool success = true;
                                         LobbyEnter_t data;
                                         data.m_ulSteamIDLobby = lobby->room_id();
-                                        data.m_rgfChatPermissions = 0; //Unused - Always 0
+                                        data.m_rgfChatPermissions = 0; // Unused - Always 0
                                         data.m_bLocked = false;
                                         data.m_EChatRoomEnterResponse = success ? k_EChatRoomEnterResponseSuccess : k_EChatRoomEnterResponseError;
                                         callback_results->addCallResult(pd->api_id, data.k_iCallback, &data, sizeof(data));
@@ -1413,19 +1399,20 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
                                     trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)lobby->room_id(), true);
                                 }
                             } else {
-                                if (we_are_in_lobby) trigger_lobby_member_join_leave((uint64)lobby->room_id(), (uint64)m.id(), false, true);
+                                if (we_are_in_lobby)
+                                    trigger_lobby_member_join_leave((uint64)lobby->room_id(), (uint64)m.id(), false, true);
                             }
                         }
                     }
 
                     if (joined) {
-                        for (auto & m : msg->lobby().members()) {
+                        for (auto &m : msg->lobby().members()) {
                             if (m.id() != settings->get_local_steam_id().ConvertToUint64()) {
-                                //TODO: is this good?
-                                //trigger_lobby_member_join_leave((uint64)lobby->room_id(), (uint64)m.id(), false, true);
+                                // TODO: is this good?
+                                // trigger_lobby_member_join_leave((uint64)lobby->room_id(), (uint64)m.id(), false, true);
                                 if (m.values().size()) {
-                                    //TODO: check if this is what steam does
-                                    //trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)m.id(), true);
+                                    // TODO: check if this is what steam does
+                                    // trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)m.id(), true);
                                 }
                             }
                         }
@@ -1441,7 +1428,6 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
             }
         }
     }
-
 
     if (msg->has_lobby_messages()) {
         PRINT_DEBUG("LOBBY MESSAGE %u %llu\n", msg->lobby_messages().type(), msg->lobby_messages().id());
@@ -1478,13 +1464,15 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
             if (msg->lobby_messages().type() == Lobby_Messages::LEAVE) {
                 PRINT_DEBUG("LOBBY MESSAGE: LEAVE %llu\n", msg->source_id());
                 leave_lobby(lobby, (uint64)msg->source_id());
-                if (we_are_in_lobby) trigger_lobby_member_join_leave((uint64)lobby->room_id(), (uint64)msg->source_id(), true, true, 0.2);
+                if (we_are_in_lobby)
+                    trigger_lobby_member_join_leave((uint64)lobby->room_id(), (uint64)msg->source_id(), true, true, 0.2);
             }
 
             if (msg->lobby_messages().type() == Lobby_Messages::CHANGE_OWNER) {
                 PRINT_DEBUG("LOBBY MESSAGE: CHANGE OWNER\n");
                 lobby->set_owner(msg->lobby_messages().idata());
-                if (we_are_in_lobby) trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)lobby->room_id(), true);
+                if (we_are_in_lobby)
+                    trigger_lobby_dataupdate((uint64)lobby->room_id(), (uint64)lobby->room_id(), true);
             }
 
             if (msg->lobby_messages().type() == Lobby_Messages::CHAT_MESSAGE) {
@@ -1509,11 +1497,10 @@ void Steam_Matchmaking::Callback(Common_Message *msg)
 
     if (msg->has_low_level()) {
         if (msg->low_level().type() == Low_Level::CONNECT) {
-            
         }
 
         if (msg->low_level().type() == Low_Level::DISCONNECT) {
-            for (auto & l: lobbies) {
+            for (auto &l : lobbies) {
                 if (leave_lobby(&(l), (uint64)msg->source_id()))
                     trigger_lobby_member_join_leave((uint64)l.room_id(), (uint64)msg->source_id(), true, true, 0.0);
             }
