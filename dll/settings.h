@@ -1,18 +1,18 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the Goldberg Emulator
+   This file is part of the half_life_steam_emulator
 
-   The Goldberg Emulator is free software; you can redistribute it and/or
+   The half_life_steam_emulator is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 3 of the License, or (at your option) any later version.
 
-   The Goldberg Emulator is distributed in the hope that it will be useful,
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public
-   License along with the Goldberg Emulator; if not, see
+   License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
 #ifndef SETTINGS_INCLUDE
@@ -82,7 +82,7 @@ class Settings {
 
     uint16 port;
 
-public:
+  public:
 #ifdef LOBBY_CONNECT
     static const bool is_lobby_connect = true;
 #else
@@ -100,73 +100,73 @@ public:
     void set_game_id(CGameID game_id);
     void set_lobby(CSteamID lobby_id);
     CSteamID get_lobby();
-    bool is_offline() {return offline; }
-    uint16 get_port() {return port;}
-    void set_port(uint16 port) { this->port = port;}
+    bool is_offline() { return offline; }
+    uint16 get_port() { return port; }
+    void set_port(uint16 port) { this->port = port; }
 
-    //DLC stuff
+    // DLC stuff
     void unlockAllDLC(bool value);
     void addDLC(AppId_t appID, std::string name, bool available);
     unsigned int DLCCount();
     bool hasDLC(AppId_t appID);
     bool getDLC(unsigned int index, AppId_t &appID, bool &available, std::string &name);
     bool matchmaking_server_list_always_lan_type = false;
-    //Depots
+    // Depots
     std::vector<DepotId_t> depots;
 
-    //App Install paths
+    // App Install paths
     void setAppInstallPath(AppId_t appID, std::string path);
     std::string getAppInstallPath(AppId_t appID);
 
-    //mod stuff
+    // mod stuff
     void addMod(PublishedFileId_t id, std::string title, std::string path);
     Mod_entry getMod(PublishedFileId_t id);
     bool isModInstalled(PublishedFileId_t id);
     std::set<PublishedFileId_t> modSet();
 
-    //leaderboards
+    // leaderboards
     void setLeaderboard(std::string leaderboard, enum ELeaderboardSortMethod sort_method, enum ELeaderboardDisplayType display_type);
     std::map<std::string, Leaderboard_config> getLeaderboards() { return leaderboards; }
-    void setCreateUnknownLeaderboards(bool enable) {create_unknown_leaderboards = enable;}
+    void setCreateUnknownLeaderboards(bool enable) { create_unknown_leaderboards = enable; }
     bool createUnknownLeaderboards() { return create_unknown_leaderboards; }
 
-    //custom broadcasts
+    // custom broadcasts
     std::set<IP_PORT> custom_broadcasts;
 
-    //stats
+    // stats
     std::map<std::string, Stat_config> getStats() { return stats; }
-    void setStatDefiniton(std::string name, struct Stat_config stat_config) {stats[ascii_to_lowercase(name)] = stat_config; }
+    void setStatDefiniton(std::string name, struct Stat_config stat_config) { stats[ascii_to_lowercase(name)] = stat_config; }
 
-    //subscribed lobby/group ids
+    // subscribed lobby/group ids
     std::set<uint64> subscribed_groups;
 
-    //images
+    // images
     std::map<int, struct Image_Data> images;
     int add_image(std::string data, uint32 width, uint32 height);
 
-    //controller
+    // controller
     struct Controller_Settings controller_settings;
     std::string glyphs_directory;
 
-    //networking
+    // networking
     bool disable_networking = false;
 
-    //overlay
+    // overlay
     bool disable_overlay = false;
 
-    //app build id
+    // app build id
     int build_id = 10;
 
-    //supported languages
+    // supported languages
     std::set<std::string> supported_languages;
 
-    //make lobby creation fail in the matchmaking interface
+    // make lobby creation fail in the matchmaking interface
     bool disable_lobby_creation = false;
 
-    //warn people who use force_ settings
+    // warn people who use force_ settings
     bool warn_forced = false;
 
-    //warn people who use local save
+    // warn people who use local save
     bool warn_local_save = false;
 };
 

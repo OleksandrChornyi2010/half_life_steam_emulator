@@ -1,6 +1,19 @@
-//
-// Created by home on 13.02.26.
-//
+/* Copyright (C) 2026 OleksandrChornyi2010 (SaNNa)
+   This file is part of the half_life_steam_emulator
+
+   The half_life_steam_emulator is free software; you can redistribute it and/or
+   modify it under the terms of the GNU Lesser General Public
+   License as published by the Free Software Foundation; either
+   version 3 of the License, or (at your option) any later version.
+
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+   Lesser General Public License for more details.
+
+   You should have received a copy of the GNU Lesser General Public
+   License along with the half_life_steam_emulator; if not, see
+   <http://www.gnu.org/licenses/>.  */
 
 #include "HLDSQuery.h"
 
@@ -9,37 +22,39 @@ void HLDSQuery::drain_socket() {
     uint8_t dummy[2048];
     struct sockaddr_in from;
     socklen_t len = sizeof(from);
-    while (recvfrom(sock, dummy, sizeof(dummy), MSG_DONTWAIT, (struct sockaddr*)&from, &len) > 0) {
+    while (recvfrom(sock, dummy, sizeof(dummy), MSG_DONTWAIT, (struct sockaddr *)&from, &len) > 0) {
         // Just dropping packets
     }
 }
 
-std::string HLDSQuery::read_string(uint8_t*& ptr, uint8_t* end) {
-    if (ptr >= end) return "";
-    std::string str = (char*)ptr;
+std::string HLDSQuery::read_string(uint8_t *&ptr, uint8_t *end) {
+    if (ptr >= end)
+        return "";
+    std::string str = (char *)ptr;
     ptr += str.length() + 1;
     return str;
 }
 
-template<typename T>
-T HLDSQuery::read_num(uint8_t*& ptr, uint8_t* end) {
-    if (ptr + sizeof(T) > end) return 0;
-    T val = *(T*)ptr;
+template <typename T>
+T HLDSQuery::read_num(uint8_t *&ptr, uint8_t *end) {
+    if (ptr + sizeof(T) > end)
+        return 0;
+    T val = *(T *)ptr;
     ptr += sizeof(T);
     return val;
 }
 
-HLDSQuery::HLDSQuery(const std::string& ip, uint16_t port) {
+HLDSQuery::HLDSQuery(const std::string &ip, uint16_t port) {
     ip_gl = ip;
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 #ifdef _WIN32
     DWORD timeout = static_cast<DWORD>(NETWORK_TIMEOUT_MS);
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout));
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&timeout, sizeof(timeout));
 #else
     struct timeval tv;
     tv.tv_sec = NETWORK_TIMEOUT_MS / 1000;
     tv.tv_usec = (NETWORK_TIMEOUT_MS % 1000) * 1000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(struct timeval));
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof(struct timeval));
 #endif
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
@@ -48,14 +63,14 @@ HLDSQuery::HLDSQuery(const std::string& ip, uint16_t port) {
 
 HLDSQuery::~HLDSQuery() { close(sock); }
 
-ssize_t HLDSQuery::send_and_receive(const std::vector<uint8_t>& request, uint8_t* buffer, size_t buf_size) {
-    sendto(sock, request.data(), request.size(), 0, (struct sockaddr*)&server_addr, sizeof(server_addr));
+ssize_t HLDSQuery::send_and_receive(const std::vector<uint8_t> &request, uint8_t *buffer, size_t buf_size) {
+    sendto(sock, request.data(), request.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
     return recvfrom(sock, buffer, buf_size, 0, nullptr, nullptr);
 }
 
-void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_data) { // TODO: Make getting a reference, not a pointer
-    uint8_t* ptr = &buffer[4];
-    uint8_t* end = buffer + res;
+void HLDSQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *out_data) { // TODO: Make getting a reference, not a pointer
+    uint8_t *ptr = &buffer[4];
+    uint8_t *end = buffer + res;
     uint8_t header = read_num<uint8_t>(ptr, end);
 
     std::cout << "\n=== (Header: 0x" << std::hex << (int)header << std::dec << ") ===" << std::endl;
@@ -118,7 +133,7 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
             std::cout << "mod_dll: " << mod_dll << std::endl;
         }
 
-        uint8_t vac  = read_num<uint8_t>(ptr, end);
+        uint8_t vac = read_num<uint8_t>(ptr, end);
         std::cout << "vac: " << (int)vac << std::endl;
 
         uint8_t bots = read_num<uint8_t>(ptr, end);
@@ -135,8 +150,7 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
         out_data->set_game_description(game);
         out_data->set_bot_player_count(bots);
         out_data->set_appid(Local_Storage::i_appid);
-    }
-    else if (header == 0x49) { // Source
+    } else if (header == 0x49) { // Source
         std::cout << "Protocol: Source (Modern)" << std::endl;
 
         uint8_t prot_ver = read_num<uint8_t>(ptr, end);
@@ -173,10 +187,10 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
         uint8_t visibility = read_num<uint8_t>(ptr, end); // Is password protected
         std::cout << "Visibility: " << (int)visibility << std::endl;
 
-        uint8_t vac  = read_num<uint8_t>(ptr, end);
+        uint8_t vac = read_num<uint8_t>(ptr, end);
         std::cout << "vac: " << (int)vac << std::endl;
 
-        std::string game_ver  = read_string(ptr, end);
+        std::string game_ver = read_string(ptr, end);
         std::cout << "game_ver: " << game_ver << std::endl;
 
         out_data->set_server_name(name);
@@ -194,7 +208,7 @@ void HLDSQuery::parse_info_buffer(uint8_t* buffer, ssize_t res, Gameserver* out_
     }
 }
 
-bool HLDSQuery::get_info(Gameserver* out_data) {
+bool HLDSQuery::get_info(Gameserver *out_data) {
     drain_socket();
     // A2S_INFO request
     uint8_t buffer[2048];
@@ -205,13 +219,14 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
 
     auto end_time = std::chrono::high_resolution_clock::now();
 
-    uint8_t* ptr = &buffer[4];
-    uint8_t* end = buffer + response;
+    uint8_t *ptr = &buffer[4];
+    uint8_t *end = buffer + response;
     uint8_t header = read_num<uint8_t>(ptr, end);
     bool chal = false;
     if (header == 0x41) {
         chal = true;
-        for (int i = 0; i < 4; i++) request.push_back(buffer[5 + i]);
+        for (int i = 0; i < 4; i++)
+            request.push_back(buffer[5 + i]);
         start_time = std::chrono::high_resolution_clock::now();
         response = send_and_receive(request, buffer, sizeof(buffer));
         end_time = std::chrono::high_resolution_clock::now();
@@ -222,8 +237,7 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
 
     if (response > 5) {
         parse_info_buffer(buffer, response, out_data);
-    }
-    else {
+    } else {
         std::cout << "No response from server. chal: " << chal << " ip: " << ip_gl << " header: " << header << std::endl;
         out_data->set_had_successful_response(false);
         return false;
@@ -234,18 +248,19 @@ bool HLDSQuery::get_info(Gameserver* out_data) {
 }
 
 void HLDSQuery::get_players(PlayerServerResult *result) {
-    if (!result) return;
+    if (!result)
+        return;
     uint8_t buffer[8192];
     drain_socket();
     ssize_t res = query_with_challenge(0x55, buffer, sizeof(buffer));
-    
+
     if (res <= 5 || buffer[4] != 0x44) {
         std::cout << "Players: Failed (Header 0x" << std::hex << (int)buffer[4] << std::dec << ")" << std::endl;
         return;
     }
 
-    uint8_t* ptr = &buffer[5];
-    uint8_t* end = buffer + res;
+    uint8_t *ptr = &buffer[5];
+    uint8_t *end = buffer + res;
     uint8_t count = read_num<uint8_t>(ptr, end);
 
     std::cout << "\n=== [PLAYERS] (" << (int)count << ") ===" << std::endl;
@@ -267,10 +282,11 @@ void HLDSQuery::get_rules() {
     drain_socket();
     ssize_t res = query_with_challenge(0x56, buffer, sizeof(buffer));
 
-    if (res <= 5 || buffer[4] != 0x45) return;
+    if (res <= 5 || buffer[4] != 0x45)
+        return;
 
-    uint8_t* ptr = &buffer[5];
-    uint8_t* end = buffer + res;
+    uint8_t *ptr = &buffer[5];
+    uint8_t *end = buffer + res;
     uint16_t count = read_num<uint16_t>(ptr, end);
 
     std::cout << "\n=== [RULES] (" << count << ") ===" << std::endl;
@@ -281,14 +297,15 @@ void HLDSQuery::get_rules() {
     }
 }
 
-ssize_t HLDSQuery::query_with_challenge(uint8_t type, uint8_t* buffer, size_t size) {
+ssize_t HLDSQuery::query_with_challenge(uint8_t type, uint8_t *buffer, size_t size) {
     std::vector<uint8_t> req = {0xFF, 0xFF, 0xFF, 0xFF, type, 0xFF, 0xFF, 0xFF, 0xFF};
     ssize_t res = send_and_receive(req, buffer, size);
 
     if (res > 5 && buffer[4] == 0x41) {
         req.clear();
         req.insert(req.end(), {0xFF, 0xFF, 0xFF, 0xFF, type});
-        for (int i = 0; i < 4; i++) req.push_back(buffer[5 + i]);
+        for (int i = 0; i < 4; i++)
+            req.push_back(buffer[5 + i]);
         res = send_and_receive(req, buffer, size);
     }
     return res;

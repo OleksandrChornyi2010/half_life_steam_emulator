@@ -1,18 +1,18 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the Goldberg Emulator
+   This file is part of the half_life_steam_emulator
 
-   The Goldberg Emulator is free software; you can redistribute it and/or
+   The half_life_steam_emulator is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 3 of the License, or (at your option) any later version.
 
-   The Goldberg Emulator is distributed in the hope that it will be useful,
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public
-   License along with the Goldberg Emulator; if not, see
+   License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
 #include "network.h"
@@ -31,47 +31,45 @@ static uint32_t upper_range_ips[MAX_BROADCASTS];
 
 #if defined(STEAM_WIN32)
 
-//windows xp support
+// windows xp support
 static int
-inet_pton4(const char *src, uint32_t *dst)
-{
-	static const char digits[] = "0123456789";
-	int saw_digit, octets, ch;
-	u_char tmp[sizeof(uint32_t)], *tp;
+inet_pton4(const char *src, uint32_t *dst) {
+    static const char digits[] = "0123456789";
+    int saw_digit, octets, ch;
+    u_char tmp[sizeof(uint32_t)], *tp;
 
-	saw_digit = 0;
-	octets = 0;
-	*(tp = tmp) = 0;
-	while ((ch = *src++) != '\0') {
-		const char *pch;
+    saw_digit = 0;
+    octets = 0;
+    *(tp = tmp) = 0;
+    while ((ch = *src++) != '\0') {
+        const char *pch;
 
-		if ((pch = strchr(digits, ch)) != NULL) {
-			size_t nx = *tp * 10 + (pch - digits);
+        if ((pch = strchr(digits, ch)) != NULL) {
+            size_t nx = *tp * 10 + (pch - digits);
 
-			if (nx > 255)
-				return (0);
-			*tp = (u_char) nx;
-			if (! saw_digit) {
-				if (++octets > 4)
-					return (0);
-				saw_digit = 1;
-			}
-		} else if (ch == '.' && saw_digit) {
-			if (octets == 4)
-				return (0);
-			*++tp = 0;
-			saw_digit = 0;
-		} else
-			return (0);
-	}
-	if (octets < 4)
-		return (0);
-	memcpy(dst, tmp, sizeof(uint32_t));
-	return (1);
+            if (nx > 255)
+                return (0);
+            *tp = (u_char)nx;
+            if (!saw_digit) {
+                if (++octets > 4)
+                    return (0);
+                saw_digit = 1;
+            }
+        } else if (ch == '.' && saw_digit) {
+            if (octets == 4)
+                return (0);
+            *++tp = 0;
+            saw_digit = 0;
+        } else
+            return (0);
+    }
+    if (octets < 4)
+        return (0);
+    memcpy(dst, tmp, sizeof(uint32_t));
+    return (1);
 }
 
-static void get_broadcast_info(uint16 port)
-{
+static void get_broadcast_info(uint16 port) {
     number_broadcasts = 0;
 
     IP_ADAPTER_INFO *pAdapterInfo = (IP_ADAPTER_INFO *)malloc(sizeof(IP_ADAPTER_INFO));
@@ -98,20 +96,19 @@ static void get_broadcast_info(uint16 port)
         while (pAdapter) {
             uint32_t iface_ip = 0, subnet_mask = 0;
 
-            if (inet_pton4(pAdapter->IpAddressList.IpMask.String, &subnet_mask) == 1
-                    && inet_pton4(pAdapter->IpAddressList.IpAddress.String, &iface_ip) == 1) {
-                    IP_PORT *ip_port = &broadcasts[number_broadcasts];
-                    uint32 broadcast_ip = iface_ip | ~subnet_mask;
-                    ip_port->ip = broadcast_ip;
-                    ip_port->port = port;
-                    lower_range_ips[number_broadcasts] = iface_ip & subnet_mask;
-                    upper_range_ips[number_broadcasts] = broadcast_ip;
-                    number_broadcasts++;
+            if (inet_pton4(pAdapter->IpAddressList.IpMask.String, &subnet_mask) == 1 && inet_pton4(pAdapter->IpAddressList.IpAddress.String, &iface_ip) == 1) {
+                IP_PORT *ip_port = &broadcasts[number_broadcasts];
+                uint32 broadcast_ip = iface_ip | ~subnet_mask;
+                ip_port->ip = broadcast_ip;
+                ip_port->port = port;
+                lower_range_ips[number_broadcasts] = iface_ip & subnet_mask;
+                upper_range_ips[number_broadcasts] = broadcast_ip;
+                number_broadcasts++;
 
-                    if (number_broadcasts >= MAX_BROADCASTS) {
-                        return;
-                    }
+                if (number_broadcasts >= MAX_BROADCASTS) {
+                    return;
                 }
+            }
 
             pAdapter = pAdapter->Next;
         }
@@ -124,8 +121,7 @@ static void get_broadcast_info(uint16 port)
 
 #elif defined(__linux__)
 
-static void get_broadcast_info(uint16 port)
-{
+static void get_broadcast_info(uint16 port) {
     /* Not sure how many platforms this will run on,
      * so it's wrapped in __linux for now.
      * Definitely won't work like this on Windows...
@@ -187,8 +183,7 @@ static void get_broadcast_info(uint16 port)
 }
 #endif
 
-static bool is_socket_valid(sock_t sock)
-{
+static bool is_socket_valid(sock_t sock) {
 #if defined(STEAM_WIN32)
 
     if (sock == (sock_t)INVALID_SOCKET || sock == (sock_t)~0) {
@@ -202,13 +197,11 @@ static bool is_socket_valid(sock_t sock)
     return true;
 }
 
-static bool is_tcp_socket_valid(struct TCP_Socket &socket)
-{
+static bool is_tcp_socket_valid(struct TCP_Socket &socket) {
     return is_socket_valid(socket.sock);
 }
 
-static int set_socket_nonblocking(sock_t sock)
-{
+static int set_socket_nonblocking(sock_t sock) {
 #if defined(STEAM_WIN32)
     u_long mode = 1;
     return (ioctlsocket(sock, FIONBIO, &mode) == 0);
@@ -217,14 +210,12 @@ static int set_socket_nonblocking(sock_t sock)
 #endif
 }
 
-static bool disable_nagle(sock_t sock)
-{
+static bool disable_nagle(sock_t sock) {
     int set = 1;
     return (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&set, sizeof(set)) == 0);
 }
 
-static void kill_socket(sock_t sock)
-{
+static void kill_socket(sock_t sock) {
 #if defined(STEAM_WIN32)
     closesocket(sock);
 #else
@@ -232,8 +223,7 @@ static void kill_socket(sock_t sock)
 #endif
 }
 
-static void kill_tcp_socket(struct TCP_Socket &socket)
-{
+static void kill_tcp_socket(struct TCP_Socket &socket) {
     if (is_socket_valid(socket.sock)) {
         kill_socket(socket.sock);
     }
@@ -242,8 +232,7 @@ static void kill_tcp_socket(struct TCP_Socket &socket)
 }
 
 static bool initialed;
-static void run_at_startup()
-{
+static void run_at_startup() {
     if (initialed) {
         return;
     }
@@ -253,7 +242,7 @@ static void run_at_startup()
         return;
 
     for (int i = 0; i < 10; ++i) {
-        //hack: the game Full Mojo Rampage calls WSACleanup on startup so we call WSAStartup a few times so it doesn't get deallocated.
+        // hack: the game Full Mojo Rampage calls WSACleanup on startup so we call WSAStartup a few times so it doesn't get deallocated.
         WSAStartup(MAKEWORD(2, 2), &wsaData);
     }
 #else
@@ -262,8 +251,7 @@ static void run_at_startup()
     initialed = true;
 }
 
-static int get_last_error()
-{
+static int get_last_error() {
 #if defined(STEAM_WIN32)
     return WSAGetLastError();
 #else
@@ -271,9 +259,8 @@ static int get_last_error()
 #endif
 }
 
-//Reset the wsa error code so that games don't get confused.
-static void reset_last_error()
-{
+// Reset the wsa error code so that games don't get confused.
+static void reset_last_error() {
 #if defined(STEAM_WIN32)
     WSASetLastError(0);
 #else
@@ -281,8 +268,7 @@ static void reset_last_error()
 #endif
 }
 
-static int send_packet_to(sock_t sock, IP_PORT ip_port, char *data, unsigned long length)
-{
+static int send_packet_to(sock_t sock, IP_PORT ip_port, char *data, unsigned long length) {
     PRINT_DEBUG("send: %lu %hhu.%hhu.%hhu.%hhu:%hu\n\n", length, ((unsigned char *)&ip_port.ip)[0], ((unsigned char *)&ip_port.ip)[1], ((unsigned char *)&ip_port.ip)[2], ((unsigned char *)&ip_port.ip)[3], htons(ip_port.port));
     struct sockaddr_storage addr;
     size_t addrsize = 0;
@@ -295,8 +281,7 @@ static int send_packet_to(sock_t sock, IP_PORT ip_port, char *data, unsigned lon
     return sendto(sock, data, length, 0, (struct sockaddr *)&addr, addrsize);
 }
 
-static int receive_packet(sock_t sock, IP_PORT *ip_port, char *data, unsigned long max_length)
-{
+static int receive_packet(sock_t sock, IP_PORT *ip_port, char *data, unsigned long max_length) {
     struct sockaddr_storage addr;
 #if defined(STEAM_WIN32)
     int addrlen = sizeof(addr);
@@ -304,7 +289,7 @@ static int receive_packet(sock_t sock, IP_PORT *ip_port, char *data, unsigned lo
     socklen_t addrlen = sizeof(addr);
 #endif
 
-    int ret = recvfrom(sock, (char *) data, max_length, 0, (struct sockaddr *)&addr, &addrlen);
+    int ret = recvfrom(sock, (char *)data, max_length, 0, (struct sockaddr *)&addr, &addrlen);
     if (ret >= 0) {
         struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
         ip_port->ip = addr_in->sin_addr.s_addr;
@@ -315,14 +300,13 @@ static int receive_packet(sock_t sock, IP_PORT *ip_port, char *data, unsigned lo
     return -1;
 }
 
-static bool send_broadcasts(sock_t sock, uint16 port, char *data, unsigned long length, std::vector<IP_PORT> *custom_broadcasts)
-{
+static bool send_broadcasts(sock_t sock, uint16 port, char *data, unsigned long length, std::vector<IP_PORT> *custom_broadcasts) {
     static std::chrono::high_resolution_clock::time_point last_get_broadcast_info;
     if (number_broadcasts < 0 || check_timedout(last_get_broadcast_info, 60.0)) {
         PRINT_DEBUG("get_broadcast_info\n");
         get_broadcast_info(port);
         std::vector<uint32_t> lower_range(lower_range_ips, lower_range_ips + number_broadcasts), upper_range(upper_range_ips, upper_range_ips + number_broadcasts);
-        for(auto &addr : *custom_broadcasts) {
+        for (auto &addr : *custom_broadcasts) {
             lower_range.push_back(addr.ip);
             upper_range.push_back(addr.ip);
         }
@@ -344,14 +328,14 @@ static bool send_broadcasts(sock_t sock, uint16 port, char *data, unsigned long 
         IP_PORT ip_port = broadcasts[i];
     }
 
-    /** 
+    /**
      * Custom targeted clients server broadcaster
-     * 
+     *
      * Sends to custom IPs the broadcast packet
      * This is useful in cases of undetected network interfaces
      */
     PRINT_DEBUG("start custom broadcasts\n");
-    for(auto &addr : *custom_broadcasts) {
+    for (auto &addr : *custom_broadcasts) {
         send_packet_to(sock, addr, data, length);
     }
 
@@ -360,15 +344,13 @@ static bool send_broadcasts(sock_t sock, uint16 port, char *data, unsigned long 
     return true;
 }
 
-static void buffers_set(sock_t sock)
-{
+static void buffers_set(sock_t sock) {
     int n = 1024 * 1024;
     setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char *)&n, sizeof(n));
     setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char *)&n, sizeof(n));
 }
 
-static bool bind_socket(sock_t sock, uint16 port)
-{
+static bool bind_socket(sock_t sock, uint16 port) {
     struct sockaddr_storage addr = {};
     size_t addrsize;
 
@@ -381,14 +363,12 @@ static bool bind_socket(sock_t sock, uint16 port)
     return !bind(sock, (struct sockaddr *)&addr, addrsize);
 }
 
-static bool socket_reuseaddr(sock_t sock)
-{
+static bool socket_reuseaddr(sock_t sock) {
     int set = 1;
     return (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char *)&set, sizeof(set)) == 0);
 }
 
-static void connect_socket(sock_t sock, IP_PORT ip_port)
-{
+static void connect_socket(sock_t sock, IP_PORT ip_port) {
     struct sockaddr_storage addr;
     size_t addrsize = 0;
     struct sockaddr_in *addr4 = (struct sockaddr_in *)&addr;
@@ -401,8 +381,7 @@ static void connect_socket(sock_t sock, IP_PORT ip_port)
     connect(sock, (struct sockaddr *)&addr, addrsize);
 }
 
-unsigned int receive_buffer_amount(sock_t sock)
-{
+unsigned int receive_buffer_amount(sock_t sock) {
 #if defined(STEAM_WIN32)
     unsigned long count = 0;
     ioctlsocket(sock, FIONREAD, &count);
@@ -414,20 +393,19 @@ unsigned int receive_buffer_amount(sock_t sock)
     return count;
 }
 
-
-static void send_tcp_pending(struct TCP_Socket &socket)
-{
+static void send_tcp_pending(struct TCP_Socket &socket) {
     size_t buf_size = socket.send_buffer.size();
-    if (buf_size == 0) return;
+    if (buf_size == 0)
+        return;
 
     int len = send(socket.sock, &(socket.send_buffer[0]), buf_size, MSG_NOSIGNAL);
-    if (len <= 0) return;
+    if (len <= 0)
+        return;
 
     socket.send_buffer.erase(socket.send_buffer.begin(), socket.send_buffer.begin() + len);
 }
 
-static void send_buffer_tcp(struct TCP_Socket &socket, Common_Message *msg)
-{
+static void send_buffer_tcp(struct TCP_Socket &socket, Common_Message *msg) {
     uint32 size = msg->ByteSizeLong(), old_size = socket.send_buffer.size();
     socket.send_buffer.resize(old_size + sizeof(uint32) + size);
     memcpy(&(socket.send_buffer[old_size]), &size, sizeof(size));
@@ -436,19 +414,19 @@ static void send_buffer_tcp(struct TCP_Socket &socket, Common_Message *msg)
     send_tcp_pending(socket);
 }
 
-static unsigned long peek_buffer_tcp(struct TCP_Socket &socket)
-{
+static unsigned long peek_buffer_tcp(struct TCP_Socket &socket) {
     uint32 length;
-    if (socket.recv_buffer.size() < sizeof(length)) return 0;
+    if (socket.recv_buffer.size() < sizeof(length))
+        return 0;
 
     memcpy(&length, &(socket.recv_buffer[0]), sizeof(length));
-    if (sizeof(length) + length > socket.recv_buffer.size()) return 0;
+    if (sizeof(length) + length > socket.recv_buffer.size())
+        return 0;
 
     return length;
 }
 
-static bool unbuffer_tcp(struct TCP_Socket &socket, Common_Message *msg)
-{
+static bool unbuffer_tcp(struct TCP_Socket &socket, Common_Message *msg) {
     uint32 l = peek_buffer_tcp(socket);
     if (!l) {
         return false;
@@ -465,8 +443,7 @@ static bool unbuffer_tcp(struct TCP_Socket &socket, Common_Message *msg)
     return false;
 }
 
-static bool recv_tcp(struct TCP_Socket &socket)
-{
+static bool recv_tcp(struct TCP_Socket &socket) {
     if (is_socket_valid(socket.sock)) {
         unsigned int size = receive_buffer_amount(socket.sock), old_size = socket.recv_buffer.size();
         int len;
@@ -481,8 +458,7 @@ static bool recv_tcp(struct TCP_Socket &socket)
     return false;
 }
 
-static void socket_timeouts(struct TCP_Socket &socket, double extra_time)
-{
+static void socket_timeouts(struct TCP_Socket &socket, double extra_time) {
     if (check_timedout(socket.last_heartbeat_sent, HEARTBEAT_TIMEOUT / 2.0)) {
         Common_Message msg;
         msg.set_allocated_low_level(new Low_Level());
@@ -497,11 +473,10 @@ static void socket_timeouts(struct TCP_Socket &socket, double extra_time)
     }
 }
 
-std::set<IP_PORT> Networking::resolve_ip(std::string dns)
-{
+std::set<IP_PORT> Networking::resolve_ip(std::string dns) {
     run_at_startup();
     std::set<IP_PORT> ips;
-    struct addrinfo* result = NULL;
+    struct addrinfo *result = NULL;
 
     uint16 port = 0;
 
@@ -529,8 +504,7 @@ std::set<IP_PORT> Networking::resolve_ip(std::string dns)
     return ips;
 }
 
-void Networking::do_callbacks_message(Common_Message *msg)
-{
+void Networking::do_callbacks_message(Common_Message *msg) {
     if (msg->has_network() || msg->has_network_old()) {
         PRINT_DEBUG("has_network\n");
         run_callbacks(CALLBACK_ID_NETWORKING, msg);
@@ -582,17 +556,16 @@ void Networking::do_callbacks_message(Common_Message *msg)
     }
 }
 
-bool Networking::handle_tcp(Common_Message *msg, struct TCP_Socket &socket)
-{
+bool Networking::handle_tcp(Common_Message *msg, struct TCP_Socket &socket) {
     socket.last_heartbeat_received = std::chrono::high_resolution_clock::now();
     if (msg->has_low_level()) {
         switch (msg->low_level().type()) {
-            case Low_Level::DISCONNECT:
-                
-                break;
-            case Low_Level::HEARTBEAT:
-                //socket.last_heartbeat_received = std::chrono::high_resolution_clock::now();
-                break;
+        case Low_Level::DISCONNECT:
+
+            break;
+        case Low_Level::HEARTBEAT:
+            // socket.last_heartbeat_received = std::chrono::high_resolution_clock::now();
+            break;
         }
     }
 
@@ -600,13 +573,13 @@ bool Networking::handle_tcp(Common_Message *msg, struct TCP_Socket &socket)
     return true;
 }
 
-struct Connection *Networking::find_connection(CSteamID search_id, uint32 appid)
-{
+struct Connection *Networking::find_connection(CSteamID search_id, uint32 appid) {
     if (appid) {
-        auto conn = std::find_if(connections.begin(), connections.end(), [&search_id, &appid](struct Connection const& conn) { 
-            if (conn.appid != appid) return false;
+        auto conn = std::find_if(connections.begin(), connections.end(), [&search_id, &appid](struct Connection const &conn) {
+            if (conn.appid != appid)
+                return false;
 
-            for (auto &id: conn.ids) {
+            for (auto &id : conn.ids) {
                 if (search_id == id) {
                     return true;
                 }
@@ -619,8 +592,8 @@ struct Connection *Networking::find_connection(CSteamID search_id, uint32 appid)
             return &(*conn);
     }
 
-    auto conn = std::find_if(connections.begin(), connections.end(), [&search_id](struct Connection const& conn) { 
-        for (auto &id: conn.ids) {
+    auto conn = std::find_if(connections.begin(), connections.end(), [&search_id](struct Connection const &conn) {
+        for (auto &id : conn.ids) {
             if (search_id == id) {
                 return true;
             }
@@ -635,9 +608,9 @@ struct Connection *Networking::find_connection(CSteamID search_id, uint32 appid)
     return NULL;
 }
 
-bool Networking::add_id_connection(struct Connection *connection, CSteamID steam_id)
-{
-    if (!connection) return false;
+bool Networking::add_id_connection(struct Connection *connection, CSteamID steam_id) {
+    if (!connection)
+        return false;
 
     auto id = std::find(connection->ids.begin(), connection->ids.end(), steam_id);
     if (id != connection->ids.end())
@@ -651,10 +624,10 @@ bool Networking::add_id_connection(struct Connection *connection, CSteamID steam
     return true;
 }
 
-struct Connection *Networking::new_connection(CSteamID search_id, uint32 appid)
-{
+struct Connection *Networking::new_connection(CSteamID search_id, uint32 appid) {
     Connection *conn = find_connection(search_id, appid);
-    if (conn && conn->appid == appid) return NULL;
+    if (conn && conn->appid == appid)
+        return NULL;
 
     struct Connection connection;
     connection.ids.push_back(search_id);
@@ -665,12 +638,12 @@ struct Connection *Networking::new_connection(CSteamID search_id, uint32 appid)
     return &(connections[connections.size() - 1]);
 }
 
-bool Networking::handle_announce(Common_Message *msg, IP_PORT ip_port)
-{
+bool Networking::handle_announce(Common_Message *msg, IP_PORT ip_port) {
     Connection *conn = find_connection((uint64)msg->source_id(), msg->announce().appid());
     if (!conn || conn->appid != msg->announce().appid()) {
         conn = new_connection((uint64)msg->source_id(), msg->announce().appid());
-        if (!conn) return false;
+        if (!conn)
+            return false;
         PRINT_DEBUG("New Connection Created\n");
     }
 
@@ -680,7 +653,7 @@ bool Networking::handle_announce(Common_Message *msg, IP_PORT ip_port)
     conn->appid = msg->announce().appid();
 
     for (int i = 0; i < msg->announce().ids_size(); ++i) {
-        add_id_connection(conn, (uint64) msg->announce().ids(i));
+        add_id_connection(conn, (uint64)msg->announce().ids(i));
     }
 
     for (int i = 0; i < msg->announce().peers_size(); ++i) {
@@ -710,16 +683,16 @@ bool Networking::handle_announce(Common_Message *msg, IP_PORT ip_port)
 
     if (msg->announce().type() == Announce::PING) {
         Common_Message msg = create_announce(false);
-        size_t size = msg.ByteSizeLong(); 
+        size_t size = msg.ByteSizeLong();
         char *buffer = new char[size];
         msg.SerializeToArray(buffer, size);
         send_packet_to(udp_socket, ip_port, buffer, size);
         delete[] buffer;
 
-        //send ping packet if not pinged
+        // send ping packet if not pinged
         if (!conn->udp_pinged) {
             Common_Message msg = create_announce(true);
-            size_t size = msg.ByteSizeLong(); 
+            size_t size = msg.ByteSizeLong();
             char *buffer = new char[size];
             msg.SerializeToArray(buffer, size);
             send_packet_to(udp_socket, ip_port, buffer, size);
@@ -733,20 +706,19 @@ bool Networking::handle_announce(Common_Message *msg, IP_PORT ip_port)
     return true;
 }
 
-bool Networking::handle_low_level_udp(Common_Message *msg, IP_PORT ip_port)
-{
-    //TODO: connection appid
+bool Networking::handle_low_level_udp(Common_Message *msg, IP_PORT ip_port) {
+    // TODO: connection appid
     struct Connection *connection = find_connection((uint64)msg->source_id());
     if (!connection)
         return false;
 
     switch (msg->low_level().type()) {
-        case Low_Level::DISCONNECT:
-            
-            break;
-        case Low_Level::HEARTBEAT:
-            
-            break;
+    case Low_Level::DISCONNECT:
+
+        break;
+    case Low_Level::HEARTBEAT:
+
+        break;
     }
 
     return false;
@@ -754,8 +726,7 @@ bool Networking::handle_low_level_udp(Common_Message *msg, IP_PORT ip_port)
 
 #define NUM_TCP_WAITING 128
 
-Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT> *custom_broadcasts, bool disable_sockets)
-{
+Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT> *custom_broadcasts, bool disable_sockets) {
     tcp_port = udp_port = port;
     own_ip = 0x7F000001;
     last_run = std::chrono::high_resolution_clock::now();
@@ -770,7 +741,7 @@ Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT>
 
     if (custom_broadcasts) {
         std::transform(custom_broadcasts->begin(), custom_broadcasts->end(), std::back_inserter(this->custom_broadcasts), [](IP_PORT addr) {addr.ip = htonl(addr.ip); addr.port = htons(addr.port); return addr; });
-        for (auto& addr : this->custom_broadcasts) {
+        for (auto &addr : this->custom_broadcasts) {
             if (addr.port == htons(0))
                 addr.port = htons(port);
         }
@@ -782,7 +753,7 @@ Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT>
     if (is_socket_valid(sock) && set_socket_nonblocking(sock)) {
         int broadcast = 1;
         setsockopt(sock, SOL_SOCKET, SO_BROADCAST, (char *)&broadcast, sizeof(broadcast));
-        //socket_reuseaddr(sock);
+        // socket_reuseaddr(sock);
 
         buffers_set(sock);
         for (unsigned i = 0; i < 1000; ++i) {
@@ -792,7 +763,7 @@ Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT>
                 udp_socket = sock;
                 break;
             } else {
-                //clear the error
+                // clear the error
                 int error = 0;
                 socklen_t len = sizeof(error);
                 getsockopt(sock, SOL_SOCKET, SO_ERROR, (char *)&error, &len);
@@ -810,7 +781,7 @@ Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT>
     PRINT_DEBUG("TCP socket: %u\n", sock);
     if (is_socket_valid(sock) && set_socket_nonblocking(sock)) {
         buffers_set(sock);
-        //socket_reuseaddr(sock);
+        // socket_reuseaddr(sock);
 
         for (unsigned i = 0; i < 1000; ++i) {
             tcp_port = port + i;
@@ -849,8 +820,7 @@ Networking::Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT>
     reset_last_error();
 }
 
-Networking::~Networking()
-{
+Networking::~Networking() {
     for (auto &c : connections) {
         kill_tcp_socket(c.tcp_socket_incoming);
         kill_tcp_socket(c.tcp_socket_outgoing);
@@ -864,15 +834,14 @@ Networking::~Networking()
     kill_socket(tcp_socket);
 }
 
-Common_Message Networking::create_announce(bool request)
-{
+Common_Message Networking::create_announce(bool request) {
     Announce *announce = new Announce();
     PRINT_DEBUG("Networking:: ids length %zu\n", ids.size());
     if (request) {
         announce->set_type(Announce::PING);
     } else {
         announce->set_type(Announce::PONG);
-        for (auto &conn: connections) {
+        for (auto &conn : connections) {
             PRINT_DEBUG("Connection %u %llu %lu\n", conn.udp_pinged, conn.ids[0].ConvertToUint64(), conn.appid);
             if (conn.udp_pinged) {
                 Announce_Other_Peers *peer = announce->add_peers();
@@ -886,18 +855,18 @@ Common_Message Networking::create_announce(bool request)
 
     announce->set_tcp_port(tcp_port);
     announce->set_appid(this->appid);
-    for (auto &id : ids) announce->add_ids(id.ConvertToUint64());
+    for (auto &id : ids)
+        announce->add_ids(id.ConvertToUint64());
     Common_Message msg;
     msg.set_allocated_announce(announce);
     msg.set_source_id(ids[0].ConvertToUint64());
     return msg;
 }
 
-void Networking::send_announce_broadcasts()
-{
+void Networking::send_announce_broadcasts() {
     Common_Message msg = create_announce(true);
 
-    size_t size = msg.ByteSizeLong(); 
+    size_t size = msg.ByteSizeLong();
     char *buffer = new char[size];
     msg.SerializeToArray(buffer, size);
     send_broadcasts(udp_socket, htons(DEFAULT_PORT), buffer, size, &this->custom_broadcasts);
@@ -910,8 +879,7 @@ void Networking::send_announce_broadcasts()
     PRINT_DEBUG("Networking:: sent broadcasts\n");
 }
 
-void Networking::Run()
-{
+void Networking::Run() {
     std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
     double time_extra = std::chrono::duration_cast<std::chrono::duration<double>>(now - last_run).count();
     last_run = now;
@@ -920,7 +888,7 @@ void Networking::Run()
         return;
     }
 
-    //PRINT_DEBUG("Networking::Run() %lf\n", time_extra);
+    // PRINT_DEBUG("Networking::Run() %lf\n", time_extra);
     PRINT_DEBUG("Networking::Run()\n");
     if (check_timedout(last_broadcast, BROADCAST_INTERVAL)) {
         send_announce_broadcasts();
@@ -931,7 +899,7 @@ void Networking::Run()
     int len;
 
     PRINT_DEBUG("RECV UDP\n");
-    while((len = receive_packet(udp_socket, &ip_port, data, sizeof(data))) >= 0) {
+    while ((len = receive_packet(udp_socket, &ip_port, data, sizeof(data))) >= 0) {
         PRINT_DEBUG("recv %i %hhu.%hhu.%hhu.%hhu:%hu\n", len, ((unsigned char *)&ip_port.ip)[0], ((unsigned char *)&ip_port.ip)[1], ((unsigned char *)&ip_port.ip)[2], ((unsigned char *)&ip_port.ip)[3], htons(ip_port.port));
         Common_Message msg;
         if (msg.ParseFromArray(data, len)) {
@@ -940,7 +908,7 @@ void Networking::Run()
                     handle_announce(&msg, ip_port);
                 } else
 
-                if (msg.has_low_level()) {
+                    if (msg.has_low_level()) {
                     handle_low_level_udp(&msg, ip_port);
                 } else
 
@@ -957,7 +925,7 @@ void Networking::Run()
     std::vector<Common_Message> local_send_copy = local_send;
     local_send.clear();
 
-    for (auto & m: local_send_copy) {
+    for (auto &m : local_send_copy) {
         m.set_source_ip(ntohl(own_ip));
         m.set_source_port(ntohs(udp_port));
         do_callbacks_message(&m);
@@ -974,11 +942,11 @@ void Networking::Run()
     while (is_socket_valid(sock = accept(tcp_socket, (struct sockaddr *)&addr, &addrlen))) {
         PRINT_DEBUG("ACCEPT SOCKET %u\n", sock);
         struct sockaddr_storage addr;
-    #if defined(STEAM_WIN32)
+#if defined(STEAM_WIN32)
         int addrlen = sizeof(addr);
-    #else
+#else
         socklen_t addrlen = sizeof(addr);
-    #endif
+#endif
         struct sockaddr_in *addr_in = (struct sockaddr_in *)&addr;
         ip_port.ip = addr_in->sin_addr.s_addr;
         ip_port.port = addr_in->sin_port;
@@ -1009,10 +977,10 @@ void Networking::Run()
                     conn = accepted.erase(conn);
                     deleted = true;
                     PRINT_DEBUG("TCP REPLACED\n");
-                    //TODO: add other ids?
+                    // TODO: add other ids?
                 } else {
-                    //Don't allow connection from unknown
-                    //Connection *conn = Networking::new_connection(msg.source_id());
+                    // Don't allow connection from unknown
+                    // Connection *conn = Networking::new_connection(msg.source_id());
                     kill_tcp_socket(*conn);
                     conn = accepted.erase(conn);
                     deleted = true;
@@ -1027,14 +995,14 @@ void Networking::Run()
             deleted = true;
             PRINT_DEBUG("TCP TIMEOUT\n");
         }
-        
-        if (!deleted){
+
+        if (!deleted) {
             ++conn;
         }
     }
 
     PRINT_DEBUG("CONNECTIONS %zu\n", connections.size());
-    for (auto &conn: connections) {
+    for (auto &conn : connections) {
         if (!is_tcp_socket_valid(conn.tcp_socket_outgoing)) {
             sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
             if (is_socket_valid(sock) && set_socket_nonblocking(sock)) {
@@ -1055,11 +1023,13 @@ void Networking::Run()
 
         if (conn.tcp_socket_incoming.received_data || conn.tcp_socket_outgoing.received_data) {
             if (!conn.connected) {
-                //reconnect the connection if it has the right appid
+                // reconnect the connection if it has the right appid
                 if (conn.appid == this->appid || conn.appid == LOBBY_CONNECT_APPID) {
-                    for (auto &c: connections) {
-                        if (&c == &conn) continue;
-                        if (c.appid != this->appid) continue;
+                    for (auto &c : connections) {
+                        if (&c == &conn)
+                            continue;
+                        if (c.appid != this->appid)
+                            continue;
                         for (auto &steam_id : conn.ids) {
                             auto i = std::find(c.ids.begin(), c.ids.end(), steam_id);
                             if (i != c.ids.end()) {
@@ -1070,7 +1040,8 @@ void Networking::Run()
                         }
                     }
 
-                    for (auto &steam_id : conn.ids) run_callback_user(steam_id, true, conn.appid);
+                    for (auto &steam_id : conn.ids)
+                        run_callback_user(steam_id, true, conn.appid);
                 }
 
                 conn.connected = true;
@@ -1085,14 +1056,14 @@ void Networking::Run()
         Common_Message msg;
         while (unbuffer_tcp(conn.tcp_socket_outgoing, &msg)) {
             PRINT_DEBUG("UNBUFFER SOCKET\n");
-            msg.set_source_ip(ntohl(conn.tcp_ip_port.ip)); //TODO: get from tcp socket
+            msg.set_source_ip(ntohl(conn.tcp_ip_port.ip)); // TODO: get from tcp socket
             handle_tcp(&msg, conn.tcp_socket_outgoing);
             conn.last_received = std::chrono::high_resolution_clock::now();
         }
 
         while (unbuffer_tcp(conn.tcp_socket_incoming, &msg)) {
             PRINT_DEBUG("UNBUFFER SOCKET\n");
-            msg.set_source_ip(ntohl(conn.tcp_ip_port.ip)); //TODO: get from tcp socket
+            msg.set_source_ip(ntohl(conn.tcp_ip_port.ip)); // TODO: get from tcp socket
             handle_tcp(&msg, conn.tcp_socket_incoming);
             conn.last_received = std::chrono::high_resolution_clock::now();
         }
@@ -1100,14 +1071,15 @@ void Networking::Run()
         PRINT_DEBUG("RUN SOCKET4 %u %u\n", conn.tcp_socket_outgoing.sock, conn.tcp_socket_incoming.sock);
         socket_timeouts(conn.tcp_socket_outgoing, time_extra);
         socket_timeouts(conn.tcp_socket_incoming, time_extra);
-
     }
 
     {
         auto conn = std::begin(connections);
         while (conn != std::end(connections)) {
             if (check_timedout(conn->last_received, USER_TIMEOUT + time_extra)) {
-                if (conn->connected) for (auto &steam_id : conn->ids) run_callback_user(steam_id, false, conn->appid);
+                if (conn->connected)
+                    for (auto &steam_id : conn->ids)
+                        run_callback_user(steam_id, false, conn->appid);
                 kill_tcp_socket(conn->tcp_socket_outgoing);
                 kill_tcp_socket(conn->tcp_socket_incoming);
                 conn = connections.erase(conn);
@@ -1118,9 +1090,11 @@ void Networking::Run()
         }
     }
 
-    for (auto &conn: connections) {
+    for (auto &conn : connections) {
         if (!(conn.tcp_socket_incoming.received_data || conn.tcp_socket_outgoing.received_data)) {
-            if (conn.connected) for (auto &steam_id : conn.ids) run_callback_user(steam_id, false, conn.appid);
+            if (conn.connected)
+                for (auto &steam_id : conn.ids)
+                    run_callback_user(steam_id, false, conn.appid);
             conn.connected = false;
         }
     }
@@ -1128,9 +1102,9 @@ void Networking::Run()
     reset_last_error();
 }
 
-void Networking::addListenId(CSteamID id)
-{
-    if (!enabled) return;
+void Networking::addListenId(CSteamID id) {
+    if (!enabled)
+        return;
     auto i = std::find(ids.begin(), ids.end(), id);
     if (i != ids.end()) {
         return;
@@ -1142,18 +1116,16 @@ void Networking::addListenId(CSteamID id)
     return;
 }
 
-void Networking::setAppID(uint32 appid)
-{
+void Networking::setAppID(uint32 appid) {
     this->appid = appid;
 }
 
-bool Networking::sendToIPPort(Common_Message *msg, uint32 ip, uint16 port, bool reliable)
-{
+bool Networking::sendToIPPort(Common_Message *msg, uint32 ip, uint16 port, bool reliable) {
     bool is_local_ip = ((ip >> 24) == 0x7F);
     uint32_t local_ip = getIP(ids.front());
     PRINT_DEBUG("sendToIPPort %X %u %X\n", ip, is_local_ip, local_ip);
-    //TODO: actually send to ip/port
-    for (auto &conn: connections) {
+    // TODO: actually send to ip/port
+    for (auto &conn : connections) {
         if (ntohl(conn.tcp_ip_port.ip) == ip || (is_local_ip && ntohl(conn.tcp_ip_port.ip) == local_ip)) {
             for (auto &steam_id : conn.ids) {
                 msg->set_dest_id(steam_id.ConvertToUint64());
@@ -1165,8 +1137,7 @@ bool Networking::sendToIPPort(Common_Message *msg, uint32 ip, uint16 port, bool 
     return true;
 }
 
-uint32 Networking::getIP(CSteamID id)
-{
+uint32 Networking::getIP(CSteamID id) {
     Connection *conn = find_connection(id, this->appid);
     if (conn) {
         return ntohl(conn->tcp_ip_port.ip);
@@ -1175,12 +1146,13 @@ uint32 Networking::getIP(CSteamID id)
     return 0;
 }
 
-bool Networking::sendTo(Common_Message *msg, bool reliable, Connection *conn)
-{
-    if (!enabled) return false;
+bool Networking::sendTo(Common_Message *msg, bool reliable, Connection *conn) {
+    if (!enabled)
+        return false;
 
     size_t size = msg->ByteSizeLong();
-    if (size >= MAX_UDP_SIZE) reliable = true; //too big for UDP
+    if (size >= MAX_UDP_SIZE)
+        reliable = true; // too big for UDP
 
     bool ret = false;
     CSteamID dest_id((uint64)msg->dest_id());
@@ -1219,9 +1191,8 @@ bool Networking::sendTo(Common_Message *msg, bool reliable, Connection *conn)
     return ret;
 }
 
-bool Networking::sendToAllIndividuals(Common_Message *msg, bool reliable)
-{
-    for (auto &conn: connections) {
+bool Networking::sendToAllIndividuals(Common_Message *msg, bool reliable) {
+    for (auto &conn : connections) {
         for (auto &steam_id : conn.ids) {
             if (steam_id.BIndividualAccount()) {
                 msg->set_dest_id(steam_id.ConvertToUint64());
@@ -1233,9 +1204,8 @@ bool Networking::sendToAllIndividuals(Common_Message *msg, bool reliable)
     return true;
 }
 
-bool Networking::sendToAll(Common_Message *msg, bool reliable)
-{
-    for (auto &conn: connections) {
+bool Networking::sendToAll(Common_Message *msg, bool reliable) {
+    for (auto &conn : connections) {
         for (auto &steam_id : conn.ids) {
             msg->set_dest_id(steam_id.ConvertToUint64());
             sendTo(msg, reliable, &conn);
@@ -1245,8 +1215,7 @@ bool Networking::sendToAll(Common_Message *msg, bool reliable)
     return true;
 }
 
-void Networking::run_callbacks(Callback_Ids id, Common_Message *msg)
-{
+void Networking::run_callbacks(Callback_Ids id, Common_Message *msg) {
     for (auto &cb : callbacks[id].callbacks) {
         if (cb.steam_id.ConvertToUint64() == 0 || msg->dest_id() == 0 || cb.steam_id.ConvertToUint64() == msg->dest_id()) {
             cb.message_callback(cb.object, msg);
@@ -1254,10 +1223,10 @@ void Networking::run_callbacks(Callback_Ids id, Common_Message *msg)
     }
 }
 
-void Networking::run_callback_user(CSteamID steam_id, bool online, uint32 appid)
-{
-    //only give callbacks for right game accounts
-    if (steam_id.BIndividualAccount() && appid != this->appid && appid != LOBBY_CONNECT_APPID) return;
+void Networking::run_callback_user(CSteamID steam_id, bool online, uint32 appid) {
+    // only give callbacks for right game accounts
+    if (steam_id.BIndividualAccount() && appid != this->appid && appid != LOBBY_CONNECT_APPID)
+        return;
 
     Common_Message msg;
     msg.set_source_id(steam_id.ConvertToUint64());
@@ -1271,9 +1240,9 @@ void Networking::run_callback_user(CSteamID steam_id, bool online, uint32 appid)
     run_callbacks(CALLBACK_ID_USER_STATUS, &msg);
 }
 
-bool Networking::setCallback(Callback_Ids id, CSteamID steam_id, void (*message_callback)(void *object, Common_Message *msg), void *object)
-{
-    if (id >= CALLBACK_IDS_MAX) return false;
+bool Networking::setCallback(Callback_Ids id, CSteamID steam_id, void (*message_callback)(void *object, Common_Message *msg), void *object) {
+    if (id >= CALLBACK_IDS_MAX)
+        return false;
 
     struct Network_Callback nc;
     nc.message_callback = message_callback;
@@ -1284,7 +1253,6 @@ bool Networking::setCallback(Callback_Ids id, CSteamID steam_id, void (*message_
     return true;
 }
 
-uint32 Networking::getOwnIP()
-{
+uint32 Networking::getOwnIP() {
     return own_ip;
 }

@@ -1,30 +1,27 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the Goldberg Emulator
+   This file is part of the half_life_steam_emulator
 
-   The Goldberg Emulator is free software; you can redistribute it and/or
+   The half_life_steam_emulator is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 3 of the License, or (at your option) any later version.
 
-   The Goldberg Emulator is distributed in the hope that it will be useful,
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public
-   License along with the Goldberg Emulator; if not, see
+   License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
 #include "settings.h"
 
-
-std::string Settings::sanitize(std::string name)
-{
+std::string Settings::sanitize(std::string name) {
     name.erase(std::remove(name.begin(), name.end(), '\n'), name.end());
     name.erase(std::remove(name.begin(), name.end(), '\r'), name.end());
 
-    for (auto& i : name)
-    {
+    for (auto &i : name) {
         if (!isprint(i))
             i = ' ';
     }
@@ -32,8 +29,7 @@ std::string Settings::sanitize(std::string name)
     return name;
 }
 
-Settings::Settings(CSteamID steam_id, CGameID game_id, std::string name, std::string language, bool offline)
-{
+Settings::Settings(CSteamID steam_id, CGameID game_id, std::string name, std::string language, bool offline) {
     this->steam_id = steam_id;
     this->game_id = game_id;
     this->name = sanitize(name);
@@ -56,59 +52,48 @@ Settings::Settings(CSteamID steam_id, CGameID game_id, std::string name, std::st
     this->create_unknown_leaderboards = true;
 }
 
-CSteamID Settings::get_local_steam_id()
-{
+CSteamID Settings::get_local_steam_id() {
     return steam_id;
 }
 
-CGameID Settings::get_local_game_id()
-{
+CGameID Settings::get_local_game_id() {
     return game_id;
 }
 
-const char *Settings::get_local_name()
-{
+const char *Settings::get_local_name() {
     return name.c_str();
 }
 
-const char *Settings::get_language()
-{
+const char *Settings::get_language() {
     return language.c_str();
 }
 
-void Settings::set_local_name(char *name)
-{
+void Settings::set_local_name(char *name) {
     this->name = name;
 }
 
-void Settings::set_language(char *language)
-{
+void Settings::set_language(char *language) {
     this->language = language;
 }
 
-void Settings::set_game_id(CGameID game_id)
-{
+void Settings::set_game_id(CGameID game_id) {
     this->game_id = game_id;
 }
 
-void Settings::set_lobby(CSteamID lobby_id)
-{
+void Settings::set_lobby(CSteamID lobby_id) {
     this->lobby_id = lobby_id;
 }
 
-CSteamID Settings::get_lobby()
-{
+CSteamID Settings::get_lobby() {
     return this->lobby_id;
 }
 
-void Settings::unlockAllDLC(bool value)
-{
+void Settings::unlockAllDLC(bool value) {
     this->unlockAllDLCs = value;
 }
 
-void Settings::addDLC(AppId_t appID, std::string name, bool available)
-{
-    auto f = std::find_if(DLCs.begin(), DLCs.end(), [&appID](DLC_entry const& item) { return item.appID == appID; });
+void Settings::addDLC(AppId_t appID, std::string name, bool available) {
+    auto f = std::find_if(DLCs.begin(), DLCs.end(), [&appID](DLC_entry const &item) { return item.appID == appID; });
     if (DLCs.end() != f) {
         f->name = name;
         f->available = available;
@@ -122,9 +107,8 @@ void Settings::addDLC(AppId_t appID, std::string name, bool available)
     DLCs.push_back(new_entry);
 }
 
-void Settings::addMod(PublishedFileId_t id, std::string title, std::string path)
-{
-    auto f = std::find_if(mods.begin(), mods.end(), [&id](Mod_entry const& item) { return item.id == id; });
+void Settings::addMod(PublishedFileId_t id, std::string title, std::string path) {
+    auto f = std::find_if(mods.begin(), mods.end(), [&id](Mod_entry const &item) { return item.id == id; });
     if (mods.end() != f) {
         f->title = title;
         f->path = path;
@@ -138,9 +122,8 @@ void Settings::addMod(PublishedFileId_t id, std::string title, std::string path)
     mods.push_back(new_entry);
 }
 
-Mod_entry Settings::getMod(PublishedFileId_t id)
-{
-    auto f = std::find_if(mods.begin(), mods.end(), [&id](Mod_entry const& item) { return item.id == id; });
+Mod_entry Settings::getMod(PublishedFileId_t id) {
+    auto f = std::find_if(mods.begin(), mods.end(), [&id](Mod_entry const &item) { return item.id == id; });
     if (mods.end() != f) {
         return *f;
     }
@@ -148,9 +131,8 @@ Mod_entry Settings::getMod(PublishedFileId_t id)
     return Mod_entry();
 }
 
-bool Settings::isModInstalled(PublishedFileId_t id)
-{
-    auto f = std::find_if(mods.begin(), mods.end(), [&id](Mod_entry const& item) { return item.id == id; });
+bool Settings::isModInstalled(PublishedFileId_t id) {
+    auto f = std::find_if(mods.begin(), mods.end(), [&id](Mod_entry const &item) { return item.id == id; });
     if (mods.end() != f) {
         return true;
     }
@@ -158,36 +140,34 @@ bool Settings::isModInstalled(PublishedFileId_t id)
     return false;
 }
 
-std::set<PublishedFileId_t> Settings::modSet()
-{
+std::set<PublishedFileId_t> Settings::modSet() {
     std::set<PublishedFileId_t> ret_set;
 
-    for (auto & m: mods) {
+    for (auto &m : mods) {
         ret_set.insert(m.id);
     }
 
     return ret_set;
 }
 
-unsigned int Settings::DLCCount()
-{
+unsigned int Settings::DLCCount() {
     return this->DLCs.size();
 }
 
-bool Settings::hasDLC(AppId_t appID)
-{
-    if (this->unlockAllDLCs) return true;
+bool Settings::hasDLC(AppId_t appID) {
+    if (this->unlockAllDLCs)
+        return true;
 
-    auto f = std::find_if(DLCs.begin(), DLCs.end(), [&appID](DLC_entry const& item) { return item.appID == appID; });
+    auto f = std::find_if(DLCs.begin(), DLCs.end(), [&appID](DLC_entry const &item) { return item.appID == appID; });
     if (DLCs.end() == f)
         return false;
 
     return f->available;
 }
 
-bool Settings::getDLC(unsigned int index, AppId_t &appID, bool &available, std::string &name)
-{
-    if (index >= DLCs.size()) return false;
+bool Settings::getDLC(unsigned int index, AppId_t &appID, bool &available, std::string &name) {
+    if (index >= DLCs.size())
+        return false;
 
     appID = DLCs[index].appID;
     available = DLCs[index].available;
@@ -195,18 +175,15 @@ bool Settings::getDLC(unsigned int index, AppId_t &appID, bool &available, std::
     return true;
 }
 
-void Settings::setAppInstallPath(AppId_t appID, std::string path)
-{
+void Settings::setAppInstallPath(AppId_t appID, std::string path) {
     app_paths[appID] = path;
 }
 
-std::string Settings::getAppInstallPath(AppId_t appID)
-{
+std::string Settings::getAppInstallPath(AppId_t appID) {
     return app_paths[appID];
 }
 
-void Settings::setLeaderboard(std::string leaderboard, enum ELeaderboardSortMethod sort_method, enum ELeaderboardDisplayType display_type)
-{
+void Settings::setLeaderboard(std::string leaderboard, enum ELeaderboardSortMethod sort_method, enum ELeaderboardDisplayType display_type) {
     Leaderboard_config leader;
     leader.sort_method = sort_method;
     leader.display_type = display_type;
@@ -214,8 +191,7 @@ void Settings::setLeaderboard(std::string leaderboard, enum ELeaderboardSortMeth
     leaderboards[leaderboard] = leader;
 }
 
-int Settings::add_image(std::string data, uint32 width, uint32 height)
-{
+int Settings::add_image(std::string data, uint32 width, uint32 height) {
     int last = images.size() + 1;
     struct Image_Data dt;
     dt.width = width;

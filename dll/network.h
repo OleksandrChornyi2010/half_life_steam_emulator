@@ -1,18 +1,18 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the Goldberg Emulator
+   This file is part of the half_life_steam_emulator
 
-   The Goldberg Emulator is free software; you can redistribute it and/or
+   The half_life_steam_emulator is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 3 of the License, or (at your option) any later version.
 
-   The Goldberg Emulator is distributed in the hope that it will be useful,
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public
-   License along with the Goldberg Emulator; if not, see
+   License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
 #ifndef NETWORK_INCLUDE
@@ -20,12 +20,11 @@
 
 #include "base.h"
 
-inline bool protobuf_message_equal(const google::protobuf::MessageLite& msg_a,
-                const google::protobuf::MessageLite& msg_b) {
-  return (msg_a.GetTypeName() == msg_b.GetTypeName()) &&
-      (msg_a.SerializeAsString() == msg_b.SerializeAsString());
+inline bool protobuf_message_equal(const google::protobuf::MessageLite &msg_a,
+                                   const google::protobuf::MessageLite &msg_b) {
+    return (msg_a.GetTypeName() == msg_b.GetTypeName()) &&
+           (msg_a.SerializeAsString() == msg_b.SerializeAsString());
 }
-
 
 #define DEFAULT_PORT 47584
 
@@ -38,8 +37,7 @@ typedef int sock_t;
 struct IP_PORT {
     uint32 ip;
     uint16 port;
-    bool operator <(const IP_PORT& other) const
-    {
+    bool operator<(const IP_PORT &other) const {
         return (ip < other.ip) || (ip == other.ip && port < other.port);
     }
 };
@@ -120,9 +118,10 @@ class Networking {
     void do_callbacks_message(Common_Message *msg);
 
     Common_Message create_announce(bool request);
-public:
-    //NOTE: for all functions ips/ports are passed/returned in host byte order
-    //ex: 127.0.0.1 should be passed as 0x7F000001
+
+  public:
+    // NOTE: for all functions ips/ports are passed/returned in host byte order
+    // ex: 127.0.0.1 should be passed as 0x7F000001
     static std::set<IP_PORT> resolve_ip(std::string dns);
     Networking(CSteamID id, uint32 appid, uint16 port, std::set<IP_PORT> *custom_broadcasts, bool disable_sockets);
     ~Networking();

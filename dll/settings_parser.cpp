@@ -1,24 +1,23 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the Goldberg Emulator
+   This file is part of the half_life_steam_emulator
 
-   The Goldberg Emulator is free software; you can redistribute it and/or
+   The half_life_steam_emulator is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 3 of the License, or (at your option) any later version.
 
-   The Goldberg Emulator is distributed in the hope that it will be useful,
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public
-   License along with the Goldberg Emulator; if not, see
+   License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
 #include "settings_parser.h"
 
-static void consume_bom(std::ifstream &input)
-{
+static void consume_bom(std::ifstream &input) {
     int bom[3];
     bom[0] = input.get();
     bom[1] = input.get();
@@ -28,8 +27,7 @@ static void consume_bom(std::ifstream &input)
     }
 }
 
-static void load_custom_broadcasts(std::string broadcasts_filepath, std::set<IP_PORT> &custom_broadcasts)
-{
+static void load_custom_broadcasts(std::string broadcasts_filepath, std::set<IP_PORT> &custom_broadcasts) {
     PRINT_DEBUG("Broadcasts file path: %s\n", broadcasts_filepath.c_str());
     std::ifstream broadcasts_file(utf8_decode(broadcasts_filepath));
     consume_bom(broadcasts_file);
@@ -42,7 +40,7 @@ static void load_custom_broadcasts(std::string broadcasts_filepath, std::set<IP_
     }
 }
 
-template<typename Out>
+template <typename Out>
 static void split_string(const std::string &s, char delim, Out result) {
     std::stringstream ss(s);
     std::string item;
@@ -51,35 +49,39 @@ static void split_string(const std::string &s, char delim, Out result) {
     }
 }
 
-static void load_gamecontroller_settings(Settings *settings)
-{
+static void load_gamecontroller_settings(Settings *settings) {
     std::string path = Local_Storage::get_game_settings_path() + "controller";
     std::vector<std::string> paths = Local_Storage::get_filenames_path(path);
 
-    for (auto & p: paths) {
+    for (auto &p : paths) {
         size_t length = p.length();
-        if (length < 4) continue;
-        if ( std::toupper(p.back()) != 'T') continue;
-        if ( std::toupper(p[length - 2]) != 'X') continue;
-        if ( std::toupper(p[length - 3]) != 'T') continue;
-        if (p[length - 4] != '.') continue;
+        if (length < 4)
+            continue;
+        if (std::toupper(p.back()) != 'T')
+            continue;
+        if (std::toupper(p[length - 2]) != 'X')
+            continue;
+        if (std::toupper(p[length - 3]) != 'T')
+            continue;
+        if (p[length - 4] != '.')
+            continue;
 
         PRINT_DEBUG("controller config %s\n", p.c_str());
         std::string action_set_name = p.substr(0, length - 4);
-        std::transform(action_set_name.begin(), action_set_name.end(), action_set_name.begin(),[](unsigned char c){ return std::toupper(c); });
+        std::transform(action_set_name.begin(), action_set_name.end(), action_set_name.begin(), [](unsigned char c) { return std::toupper(c); });
 
         std::string controller_config_path = path + PATH_SEPARATOR + p;
-        std::ifstream input( utf8_decode(controller_config_path) );
+        std::ifstream input(utf8_decode(controller_config_path));
         if (input.is_open()) {
             consume_bom(input);
             std::map<std::string, std::pair<std::set<std::string>, std::string>> button_pairs;
 
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
@@ -101,8 +103,8 @@ static void load_gamecontroller_settings(Settings *settings)
                     }
                 }
 
-                std::transform(action_name.begin(), action_name.end(), action_name.begin(),[](unsigned char c){ return std::toupper(c); });
-                std::transform(button_name.begin(), button_name.end(), button_name.begin(),[](unsigned char c){ return std::toupper(c); });
+                std::transform(action_name.begin(), action_name.end(), action_name.begin(), [](unsigned char c) { return std::toupper(c); });
+                std::transform(button_name.begin(), button_name.end(), button_name.begin(), [](unsigned char c) { return std::toupper(c); });
                 std::pair<std::set<std::string>, std::string> button_config = {{}, source_mode};
                 split_string(button_name, ',', std::inserter(button_config.first, button_config.first.begin()));
                 button_pairs[action_name] = button_config;
@@ -117,9 +119,9 @@ static void load_gamecontroller_settings(Settings *settings)
     settings->glyphs_directory = path + (PATH_SEPARATOR "glyphs" PATH_SEPARATOR);
 }
 
-uint32 create_localstorage_settings(Settings **settings_client_out, Settings **settings_server_out, Local_Storage **local_storage_out)
-{
-    std::string program_path = Local_Storage::get_program_path(), save_path = Local_Storage::get_user_appdata_path();;
+uint32 create_localstorage_settings(Settings **settings_client_out, Settings **settings_server_out, Local_Storage **local_storage_out) {
+    std::string program_path = Local_Storage::get_program_path(), save_path = Local_Storage::get_user_appdata_path();
+    ;
 
     PRINT_DEBUG("Current Path %s save_path: %s\n", program_path.c_str(), save_path.c_str());
 
@@ -129,21 +131,24 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     uint32 appid = 0;
     try {
         appid = std::stoi(array);
-    } catch (...) {}
+    } catch (...) {
+    }
     if (!appid) {
         memset(array, 0, sizeof(array));
         array[0] = '0';
         Local_Storage::get_file_data("steam_appid.txt", array, sizeof(array) - 1);
         try {
             appid = std::stoi(array);
-        } catch (...) {}
+        } catch (...) {
+        }
         if (!appid) {
             memset(array, 0, sizeof(array));
             array[0] = '0';
             Local_Storage::get_file_data(program_path + "steam_appid.txt", array, sizeof(array) - 1);
             try {
                 appid = std::stoi(array);
-            } catch (...) {}
+            } catch (...) {
+            }
         }
     }
 
@@ -205,7 +210,6 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
         local_storage->store_data_settings("listen_port.txt", array_port, strlen(array_port));
     }
 
-
     // Custom broadcasts
     std::set<IP_PORT> custom_broadcasts;
     load_custom_broadcasts(local_storage->get_global_settings_path() + "custom_broadcasts.txt", custom_broadcasts);
@@ -230,7 +234,7 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     CSteamID user_id;
     uint64 steam_id = 0;
     bool generate_new = false;
-    //try to load steam id from game specific settings folder first
+    // try to load steam id from game specific settings folder first
     if (local_storage->get_data(Local_Storage::settings_storage_folder, "user_steam_id.txt", array_steam_id, sizeof(array_steam_id) - 1) > 0) {
         user_id = CSteamID((uint64)std::atoll(array_steam_id));
         if (!user_id.IsValid()) {
@@ -264,26 +268,28 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string lang_config_path = Local_Storage::get_game_settings_path() + "supported_languages.txt";
-        std::ifstream input( utf8_decode(lang_config_path) );
+        std::ifstream input(utf8_decode(lang_config_path));
 
         std::string first_language;
         if (input.is_open()) {
             consume_bom(input);
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
                 try {
                     std::string lang = line;
-                    if (!first_language.size()) first_language = lang;
+                    if (!first_language.size())
+                        first_language = lang;
                     supported_languages.insert(lang);
                     PRINT_DEBUG("Added supported_language %s\n", lang.c_str());
-                } catch (...) {}
+                } catch (...) {
+                }
             }
         }
 
@@ -307,7 +313,7 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
         std::string steam_settings_path = Local_Storage::get_game_settings_path();
 
         std::vector<std::string> paths = Local_Storage::get_filenames_path(steam_settings_path);
-        for (auto & p: paths) {
+        for (auto &p : paths) {
             PRINT_DEBUG("steam settings path %s\n", p.c_str());
             if (p == "offline.txt") {
                 steam_offline_mode = true;
@@ -348,7 +354,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
             } else if (p == "build_id.txt") {
                 char array_id[10] = {};
                 int len = Local_Storage::get_file_data(steam_settings_path + "build_id.txt", array_id, sizeof(array_id) - 1);
-                if (len > 0) build_id = std::stoi(array_id);
+                if (len > 0)
+                    build_id = std::stoi(array_id);
             }
         }
     }
@@ -376,14 +383,14 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string dlc_config_path = Local_Storage::get_game_settings_path() + "DLC.txt";
-        std::ifstream input( utf8_decode(dlc_config_path) );
+        std::ifstream input(utf8_decode(dlc_config_path));
         if (input.is_open()) {
             consume_bom(input);
             settings_client->unlockAllDLC(false);
             settings_server->unlockAllDLC(false);
             PRINT_DEBUG("Locking all DLC\n");
 
-            for( std::string line; std::getline( input, line ); ) {
+            for (std::string line; std::getline(input, line);) {
                 if (!line.empty() && line.front() == '#') {
                     continue;
                 }
@@ -409,7 +416,7 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
                 }
             }
         } else {
-            //unlock all DLC
+            // unlock all DLC
             PRINT_DEBUG("Unlocking all DLC\n");
             settings_client->unlockAllDLC(true);
             settings_server->unlockAllDLC(true);
@@ -418,16 +425,16 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string dlc_config_path = Local_Storage::get_game_settings_path() + "app_paths.txt";
-        std::ifstream input( utf8_decode(dlc_config_path) );
+        std::ifstream input(utf8_decode(dlc_config_path));
 
         if (input.is_open()) {
             consume_bom(input);
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
@@ -453,18 +460,18 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string dlc_config_path = Local_Storage::get_game_settings_path() + "leaderboards.txt";
-        std::ifstream input( utf8_decode(dlc_config_path) );
+        std::ifstream input(utf8_decode(dlc_config_path));
         if (input.is_open()) {
             consume_bom(input);
             settings_client->setCreateUnknownLeaderboards(false);
             settings_server->setCreateUnknownLeaderboards(false);
 
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
@@ -495,15 +502,15 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string stats_config_path = Local_Storage::get_game_settings_path() + "stats.txt";
-        std::ifstream input( utf8_decode(stats_config_path) );
+        std::ifstream input(utf8_decode(stats_config_path));
         if (input.is_open()) {
             consume_bom(input);
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
@@ -525,7 +532,7 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
                     }
                 }
 
-                std::transform(stat_type.begin(), stat_type.end(), stat_type.begin(),[](unsigned char c){ return std::tolower(c); });
+                std::transform(stat_type.begin(), stat_type.end(), stat_type.begin(), [](unsigned char c) { return std::tolower(c); });
                 struct Stat_config config = {};
 
                 try {
@@ -560,15 +567,15 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string depots_config_path = Local_Storage::get_game_settings_path() + "depots.txt";
-        std::ifstream input( utf8_decode(depots_config_path) );
+        std::ifstream input(utf8_decode(depots_config_path));
         if (input.is_open()) {
             consume_bom(input);
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
@@ -577,22 +584,23 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
                     settings_client->depots.push_back(depot_id);
                     settings_server->depots.push_back(depot_id);
                     PRINT_DEBUG("Added depot %u\n", depot_id);
-                } catch (...) {}
+                } catch (...) {
+                }
             }
         }
     }
 
     {
         std::string depots_config_path = Local_Storage::get_game_settings_path() + "subscribed_groups.txt";
-        std::ifstream input( utf8_decode(depots_config_path) );
+        std::ifstream input(utf8_decode(depots_config_path));
         if (input.is_open()) {
             consume_bom(input);
-            for( std::string line; getline( input, line ); ) {
-                if (!line.empty() && line[line.length()-1] == '\n') {
+            for (std::string line; getline(input, line);) {
+                if (!line.empty() && line[line.length() - 1] == '\n') {
                     line.pop_back();
                 }
 
-                if (!line.empty() && line[line.length()-1] == '\r') {
+                if (!line.empty() && line[line.length() - 1] == '\r') {
                     line.pop_back();
                 }
 
@@ -601,7 +609,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
                     settings_client->subscribed_groups.insert(source_id);
                     settings_server->subscribed_groups.insert(source_id);
                     PRINT_DEBUG("Added source %llu\n", source_id);
-                } catch (...) {}
+                } catch (...) {
+                }
             }
         }
     }
@@ -609,13 +618,14 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     {
         std::string mod_path = Local_Storage::get_game_settings_path() + "mods";
         std::vector<std::string> paths = Local_Storage::get_filenames_path(mod_path);
-        for (auto & p: paths) {
+        for (auto &p : paths) {
             PRINT_DEBUG("mod directory %s\n", p.c_str());
             try {
                 PublishedFileId_t id = std::stoull(p);
                 settings_client->addMod(id, p, mod_path + PATH_SEPARATOR + p);
                 settings_server->addMod(id, p, mod_path + PATH_SEPARATOR + p);
-            } catch (...) {}
+            } catch (...) {
+            }
         }
     }
 
@@ -629,8 +639,7 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     return appid;
 }
 
-void save_global_settings(Local_Storage *local_storage, char *name, char *language)
-{
+void save_global_settings(Local_Storage *local_storage, char *name, char *language) {
     local_storage->store_data_settings("account_name.txt", name, strlen(name));
     local_storage->store_data_settings("language.txt", language, strlen(language));
 }

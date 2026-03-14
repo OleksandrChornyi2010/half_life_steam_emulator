@@ -1,18 +1,18 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the Goldberg Emulator
+   This file is part of the half_life_steam_emulator
 
-   The Goldberg Emulator is free software; you can redistribute it and/or
+   The half_life_steam_emulator is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public
    License as published by the Free Software Foundation; either
    version 3 of the License, or (at your option) any later version.
 
-   The Goldberg Emulator is distributed in the hope that it will be useful,
+   The half_life_steam_emulator is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    Lesser General Public License for more details.
 
    You should have received a copy of the GNU Lesser General Public
-   License along with the Goldberg Emulator; if not, see
+   License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
 #ifndef BASE_INCLUDE
@@ -20,7 +20,11 @@
 
 #include "common_includes.h"
 
-#define PUSH_BACK_IF_NOT_IN(vector, element) { if(std::find(vector.begin(), vector.end(), element) == vector.end()) vector.push_back(element); }
+#define PUSH_BACK_IF_NOT_IN(vector, element)                                  \
+    {                                                                         \
+        if (std::find(vector.begin(), vector.end(), element) == vector.end()) \
+            vector.push_back(element);                                        \
+    }
 
 extern std::recursive_mutex global_mutex;
 
@@ -28,9 +32,8 @@ std::string get_env_variable(std::string name);
 bool set_env_variable(std::string name, std::string value);
 bool check_timedout(std::chrono::high_resolution_clock::time_point old, double timeout);
 
-class CCallbackMgr
-{
-public:
+class CCallbackMgr {
+  public:
     static void SetRegister(class CCallbackBase *pCallback, int iCallback) {
         pCallback->m_nCallbackFlags |= CCallbackBase::k_ECallbackFlagsRegistered;
         pCallback->m_iCallback = iCallback;
@@ -60,8 +63,7 @@ struct Steam_Call_Result {
         iCallback = icb;
     }
 
-    bool operator==(const struct Steam_Call_Result& a)
-    {
+    bool operator==(const struct Steam_Call_Result &a) {
         return a.api_call == api_call && a.callbacks == callbacks;
     }
 
@@ -112,7 +114,7 @@ class SteamCallResults {
     std::vector<class CCallbackBase *> completed_callbacks;
     void (*cb_all)(std::vector<char> result, int callback) = nullptr;
 
-public:
+  public:
     void addCallCompleted(class CCallbackBase *cb) {
         if (std::find(completed_callbacks.begin(), completed_callbacks.end(), cb) == completed_callbacks.end()) {
             completed_callbacks.push_back(cb);
@@ -127,7 +129,7 @@ public:
     }
 
     void addCallBack(SteamAPICall_t api_call, class CCallbackBase *cb) {
-        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const& item) { return item.api_call == api_call; });
+        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const &item) { return item.api_call == api_call; });
         if (cb_result != callresults.end()) {
             cb_result->callbacks.push_back(cb);
             CCallbackMgr::SetRegister(cb, cb->GetICallback());
@@ -135,17 +137,21 @@ public:
     }
 
     bool exists(SteamAPICall_t api_call) {
-        auto cr = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const& item) { return item.api_call == api_call; });
-        if (cr == callresults.end()) return false;
-        if (!cr->call_completed()) return false;
+        auto cr = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const &item) { return item.api_call == api_call; });
+        if (cr == callresults.end())
+            return false;
+        if (!cr->call_completed())
+            return false;
         return true;
     }
 
     bool callback_result(SteamAPICall_t api_call, void *copy_to, unsigned int size) {
-        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const& item) { return item.api_call == api_call; });
+        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const &item) { return item.api_call == api_call; });
         if (cb_result != callresults.end()) {
-            if (!cb_result->call_completed()) return false;
-            if (cb_result->result.size() > size) return false;
+            if (!cb_result->call_completed())
+                return false;
+            if (cb_result->result.size() > size)
+                return false;
 
             memcpy(copy_to, &(cb_result->result[0]), cb_result->result.size());
             cb_result->to_delete = true;
@@ -156,7 +162,7 @@ public:
     }
 
     void rmCallBack(SteamAPICall_t api_call, class CCallbackBase *cb) {
-        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const& item) { return item.api_call == api_call; });
+        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const &item) { return item.api_call == api_call; });
         if (cb_result != callresults.end()) {
             auto it = std::find(cb_result->callbacks.begin(), cb_result->callbacks.end(), cb);
             if (it != cb_result->callbacks.end()) {
@@ -167,8 +173,8 @@ public:
     }
 
     void rmCallBack(class CCallbackBase *cb) {
-        //TODO: check if callback is callback or call result?
-        for (auto & cr: callresults) {
+        // TODO: check if callback is callback or call result?
+        for (auto &cr : callresults) {
             auto it = std::find(cr.callbacks.begin(), cr.callbacks.end(), cb);
             if (it != cr.callbacks.end()) {
                 cr.callbacks.erase(it);
@@ -180,8 +186,8 @@ public:
         }
     }
 
-    SteamAPICall_t addCallResult(SteamAPICall_t api_call, int iCallback, void *result, unsigned int size, double timeout=DEFAULT_CB_TIMEOUT, bool run_call_completed_cb=true) {
-        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const& item) { return item.api_call == api_call; });
+    SteamAPICall_t addCallResult(SteamAPICall_t api_call, int iCallback, void *result, unsigned int size, double timeout = DEFAULT_CB_TIMEOUT, bool run_call_completed_cb = true) {
+        auto cb_result = std::find_if(callresults.begin(), callresults.end(), [api_call](struct Steam_Call_Result const &item) { return item.api_call == api_call; });
         if (cb_result != callresults.end()) {
             if (cb_result->reserved) {
                 std::chrono::high_resolution_clock::time_point created = cb_result->created;
@@ -208,7 +214,7 @@ public:
         return callresults.back().api_call;
     }
 
-    SteamAPICall_t addCallResult(int iCallback, void *result, unsigned int size, double timeout=DEFAULT_CB_TIMEOUT, bool run_call_completed_cb=true) {
+    SteamAPICall_t addCallResult(int iCallback, void *result, unsigned int size, double timeout = DEFAULT_CB_TIMEOUT, bool run_call_completed_cb = true) {
         return addCallResult(generate_steam_api_call_id(), iCallback, result, size, timeout, run_call_completed_cb);
     }
 
@@ -234,32 +240,32 @@ public:
                     callresults[index].to_delete = true;
                     if (callresults[index].has_cb()) {
                         std::vector<class CCallbackBase *> temp_cbs = callresults[index].callbacks;
-                        for (auto & cb : temp_cbs) {
+                        for (auto &cb : temp_cbs) {
                             PRINT_DEBUG("Calling callresult %p %i\n", cb, cb->GetICallback());
                             global_mutex.unlock();
-                            //TODO: unlock relock doesn't work if mutex was locked more than once.
-                            if (run_call_completed_cb) { //run the right function depending on if it's a callback or a call result.
+                            // TODO: unlock relock doesn't work if mutex was locked more than once.
+                            if (run_call_completed_cb) { // run the right function depending on if it's a callback or a call result.
                                 cb->Run(&(result[0]), false, api_call);
                             } else {
                                 cb->Run(&(result[0]));
                             }
-                            //COULD BE DELETED SO DON'T TOUCH CB
+                            // COULD BE DELETED SO DON'T TOUCH CB
                             global_mutex.lock();
                             PRINT_DEBUG("callresult done\n");
                         }
                     }
 
                     if (run_call_completed_cb) {
-                        //can it happen that one is removed during the callback?
+                        // can it happen that one is removed during the callback?
                         std::vector<class CCallbackBase *> callbacks = completed_callbacks;
                         SteamAPICallCompleted_t data;
                         data.m_hAsyncCall = api_call;
                         data.m_iCallback = iCallback;
                         data.m_cubParam = result.size();
 
-                        for (auto & cb: callbacks) {
+                        for (auto &cb : callbacks) {
                             PRINT_DEBUG("Call complete cb %i %p %llu\n", iCallback, cb, api_call);
-                            //TODO: check if this is a problem or not.
+                            // TODO: check if this is a problem or not.
                             SteamAPICallCompleted_t temp = data;
                             global_mutex.unlock();
                             cb->Run(&temp);
@@ -301,7 +307,6 @@ public:
     }
 };
 
-
 struct Steam_Call_Back {
     std::vector<class CCallbackBase *> callbacks;
     std::vector<std::vector<char>> results;
@@ -310,7 +315,8 @@ struct Steam_Call_Back {
 class SteamCallBacks {
     std::map<int, struct Steam_Call_Back> callbacks;
     SteamCallResults *results;
-public:
+
+  public:
     SteamCallBacks(SteamCallResults *results) {
         this->results = results;
     }
@@ -326,8 +332,8 @@ public:
         if (std::find(callbacks[iCallback].callbacks.begin(), callbacks[iCallback].callbacks.end(), cb) == callbacks[iCallback].callbacks.end()) {
             callbacks[iCallback].callbacks.push_back(cb);
             CCallbackMgr::SetRegister(cb, iCallback);
-            for (auto & res: callbacks[iCallback].results) {
-                //TODO: timeout?
+            for (auto &res : callbacks[iCallback].results) {
+                // TODO: timeout?
                 SteamAPICall_t api_id = results->addCallResult(iCallback, &(res[0]), res.size(), 0.0, false);
                 results->addCallBack(api_id, cb);
             }
@@ -336,10 +342,10 @@ public:
 
     void addCBResult(int iCallback, void *result, unsigned int size, double timeout, bool dont_post_if_already) {
         if (dont_post_if_already) {
-            for (auto & r : callbacks[iCallback].results) {
+            for (auto &r : callbacks[iCallback].results) {
                 if (r.size() == size) {
                     if (memcmp(&(r[0]), result, size) == 0) {
-                        //cb already posted
+                        // cb already posted
                         return;
                     }
                 }
@@ -350,7 +356,7 @@ public:
         temp.resize(size);
         memcpy(&(temp[0]), result, size);
         callbacks[iCallback].results.push_back(temp);
-        for (auto cb: callbacks[iCallback].callbacks) {
+        for (auto cb : callbacks[iCallback].callbacks) {
             SteamAPICall_t api_id = results->addCallResult(iCallback, result, size, timeout, false);
             results->addCallBack(api_id, cb);
         }
@@ -388,7 +394,7 @@ public:
     }
 
     void runCallBacks() {
-        for (auto & c : callbacks) {
+        for (auto &c : callbacks) {
             c.second.results.clear();
         }
     }
@@ -405,21 +411,22 @@ class Auth_Ticket_Manager {
     class Networking *network;
     class SteamCallBacks *callbacks;
 
-    void launch_callback(CSteamID id, EAuthSessionResponse resp, double delay=0);
+    void launch_callback(CSteamID id, EAuthSessionResponse resp, double delay = 0);
     void launch_callback_gs(CSteamID id, bool approved);
     std::vector<struct Auth_Ticket_Data> inbound, outbound;
-public:
+
+  public:
     Auth_Ticket_Manager(class Settings *settings, class Networking *network, class SteamCallBacks *callbacks);
 
     void Callback(Common_Message *msg);
-    uint32 getTicket( void *pTicket, int cbMaxTicket, uint32 *pcbTicket );
+    uint32 getTicket(void *pTicket, int cbMaxTicket, uint32 *pcbTicket);
     void cancelTicket(uint32 number);
     EBeginAuthSessionResult beginAuth(const void *pAuthTicket, int cbAuthTicket, CSteamID steamID);
     bool endAuth(CSteamID id);
     uint32 countInboundAuth();
-    bool SendUserConnectAndAuthenticate( uint32 unIPClient, const void *pvAuthBlob, uint32 cubAuthBlobSize, CSteamID *pSteamIDUser );
+    bool SendUserConnectAndAuthenticate(uint32 unIPClient, const void *pvAuthBlob, uint32 cubAuthBlobSize, CSteamID *pSteamIDUser);
     CSteamID fakeUser();
-    Auth_Ticket_Data getTicketData( void *pTicket, int cbMaxTicket, uint32 *pcbTicket );
+    Auth_Ticket_Data getTicketData(void *pTicket, int cbMaxTicket, uint32 *pcbTicket);
 };
 
 struct RunCBs {
@@ -429,7 +436,8 @@ struct RunCBs {
 
 class RunEveryRunCB {
     std::vector<struct RunCBs> cbs;
-public:
+
+  public:
     void add(void (*cb)(void *object), void *object) {
         remove(cb, object);
         RunCBs rcb;
