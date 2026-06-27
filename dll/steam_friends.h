@@ -237,6 +237,16 @@ class Steam_Friends : public ISteamFriends003,
         return GetFriendByIndex(iFriend, (int)eFriendFlags);
     }
 
+    void GetFriendByIndex(CSteamID &ret, int iFriend, int iFriendFlags) {
+        PRINT_DEBUG("STUB: Steam_Friends::GetFriendByIndex (Windows ABI)\n");
+        ret = k_steamIDNil;
+    }
+
+    void GetFriendByIndex(CSteamID &ret, int iFriend, EFriendFlags eFriendFlags) {
+        PRINT_DEBUG("STUB: Steam_Friends::GetFriendByIndex old (Windows ABI)\n");
+        ret = k_steamIDNil;
+    }
+
     // returns a relationship to a user
     EFriendRelationship GetFriendRelationship(CSteamID steamIDFriend) {
         PRINT_DEBUG("Steam_Friends::GetFriendRelationship %llu\n", steamIDFriend.ConvertToUint64());
@@ -421,6 +431,11 @@ class Steam_Friends : public ISteamFriends003,
         return k_steamIDNil;
     }
 
+    void GetClanByIndex(CSteamID &ret, int iClan) {
+        PRINT_DEBUG("Steam_Friends::GetClanByIndex\n");
+        ret = k_steamIDNil;
+    }
+
     const char *GetClanName(CSteamID steamIDClan) {
         PRINT_DEBUG("Steam_Friends::GetClanName\n");
         return "";
@@ -456,6 +471,11 @@ class Steam_Friends : public ISteamFriends003,
     CSteamID GetFriendFromSourceByIndex(CSteamID steamIDSource, int iFriend) {
         PRINT_DEBUG("Steam_Friends::GetFriendFromSourceByIndex\n");
         return k_steamIDNil;
+    }
+
+    void GetFriendFromSourceByIndex(CSteamID &ret, CSteamID steamIDSource, int iFriend) {
+        PRINT_DEBUG("Steam_Friends::GetFriendFromSourceByIndex\n");
+        ret = k_steamIDNil;
     }
 
     // returns true if the local user can see that steamIDUser is a member or in steamIDSource
@@ -618,6 +638,11 @@ class Steam_Friends : public ISteamFriends003,
         return k_steamIDNil;
     }
 
+    void GetClanOwner(CSteamID &ret, CSteamID steamIDClan) {
+        PRINT_DEBUG("Steam_Friends::GetClanOwner\n");
+        ret = k_steamIDNil;
+    }
+
     // returns the number of officers in a clan (including the owner)
     int GetClanOfficerCount(CSteamID steamIDClan) {
         PRINT_DEBUG("Steam_Friends::GetClanOfficerCount\n");
@@ -628,6 +653,11 @@ class Steam_Friends : public ISteamFriends003,
     CSteamID GetClanOfficerByIndex(CSteamID steamIDClan, int iOfficer) {
         PRINT_DEBUG("Steam_Friends::GetClanOfficerByIndex\n");
         return k_steamIDNil;
+    }
+
+    void GetClanOfficerByIndex(CSteamID &ret, CSteamID steamIDClan, int iOfficer) {
+        PRINT_DEBUG("Steam_Friends::GetClanOfficerByIndex\n");
+        ret = k_steamIDNil;
     }
 
     // if current user is chat restricted, he can't send or receive any text/voice chat messages.
@@ -784,6 +814,11 @@ class Steam_Friends : public ISteamFriends003,
         return k_steamIDNil;
     }
 
+    void GetCoplayFriend(CSteamID &ret, int iCoplayFriend) {
+        PRINT_DEBUG("Steam_Friends::GetCoplayFriend\n");
+        ret = k_steamIDNil;
+    }
+
     int GetFriendCoplayTime(CSteamID steamIDFriend) {
         PRINT_DEBUG("Steam_Friends::GetFriendCoplayTime\n");
         return 0;
@@ -822,6 +857,11 @@ class Steam_Friends : public ISteamFriends003,
     CSteamID GetChatMemberByIndex(CSteamID steamIDClan, int iUser) {
         PRINT_DEBUG("Steam_Friends::GetChatMemberByIndex\n");
         return k_steamIDNil;
+    }
+
+    void GetChatMemberByIndex(CSteamID &ret, CSteamID steamIDClan, int iUser) {
+        PRINT_DEBUG("Steam_Friends::GetChatMemberByIndex\n");
+        ret = k_steamIDNil;
     }
 
     bool SendClanChatMessage(CSteamID steamIDClanChat, const char *pchText) {

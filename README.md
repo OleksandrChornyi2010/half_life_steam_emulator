@@ -3,6 +3,7 @@
 This is a fork of [Goldberg steam emulator](https://gitlab.com/Mr_Goldberg/goldberg_emulator/) with the aim to make half-life based games server browser work like the original one. Currently it works only on Linux, but I plan to add windows support soon. For a readme on how to use it see: [The Release Readme](Readme_release.txt)
 
 ## How to use
+
 The usage instruction doesn't differ from the original emulator
 
 Replace the steam_api(64).dll (libsteam_api.so on linux) from the game with mine. For linux make sure that if the original api is 32 bit you use a 32 bit build and if it's 64 bit you use a 64 bit build.
@@ -16,6 +17,7 @@ I also recommend adding local_save.txt to the game directory and writing a folde
 For more information see: [The Release Readme](Readme_release.txt)
 
 ## Download Binaries
+
 You can download stable builds from the [release section](https://github.com/OleksandrChornyi2010/half_life_steam_emulator/releases) of this repository.
 
 ## Features
@@ -40,30 +42,67 @@ If you want a particular game to be supported by the emulator, create an issue i
     display: inline-block;
     line-height: 1.5;
 ">
-  add game support
+add game support
 </span> label
 
 ## Building
+
 These are instructions for the steam_api build target. Other targets are not required for half-life.
 
+### Preparation:
+
+Notice that you need 32-bit protobuf built as a static library so the resulting emulator won't depend on it being installed. Notice that protoc package is also required and has to be the same version as protobuf lib. Currently any version higher than 3.1.0 is supported. Read Preparation topic for each OS for more info.
+
 ### Linux
-#### 1. Requiriments:
-You need protobuf-lite (dev package) and protoc.
 
-##### Critical: For Half-Life based games, you must have the 32-bit versions of these libraries
-- Currently, version 5.28.1 of protobuf is used, but you can try using higher versions.
-- Protobuf and it's dependencies must be installed into _/usr/lib32/_ as a static library (.a) so the resulting emulator won't depend on system libs.
+#### Building .so:
 
-#### 2. Building using CMake Presets
-Since we have a CMakePresets.json, building is easy:
+##### Preparation:
+
+Protobuf and protoc built into _/opt/protobuf-32_ are required.
+
+##### Building:
+
+Use preset to build:
+
 ```Bash
-#32-bit Debug
-cmake --preset linux-x86-debug 
-cmake --build build/linux/linux-x86-debug -j8
+cmake --preset linux-x86-release
+cmake --build --preset linux-x86-release -j$(nproc)
+```
+
+#### Building .dll:
+
+You can use Linux cross platform compiler MinGW for the windows build. DLL built this way may crash because of CRT mismatch.
+
+##### Preparation:
+
+32 bit version of MinGW Compiler is required.
+
+Protobuf built into _/opt/protobuf-mingw32_ **using MinGW**, and protoc built into _/opt/protobuf-32_ **using any linux compiler** are required.
+
+##### Building:
+
+Use preset to build:
+
+```Bash
+cmake --preset mingw-win-x86-release
+cmake --build --preset mingw-win-x86-release -j$(nproc)
 ```
 
 ### Windows
-Windows builds are not currently made and tested, but you're welcome to try it out youself.
+
+#### Preparation
+
+Protobuf and protoc built into _C:\\Libraries\\protobuf-32_ are required.
+
+##### Building .dll:
+
+Use preset to build:
+
+```Bash
+cmake --preset win-x86-release
+cmake --build build/win/win-x86-release --config Release --target steam_api --parallel
+```
 
 ## Design Choices / FAQ
 
@@ -73,8 +112,10 @@ It's as illegal as Wine or any HLE console emulator. All this does is remove the
 
 ##### But it breaks Steam DRM ?
 
-It doesn't break any DRM. If the game has a protection that doesn't let you use a custom steam api dll it needs to be cracked before you use my emulator. Steam is a DRM as much as any API is a DRM. Steam has actual DRM called steamstub which can easily be cracked but this won't crack it for you.
+It doesn't break any DRM. If the game has a protection that doesn't let you use a custom steam api dll it needs to be cracked before you use this emulator. Steam is a DRM as much as any API is a DRM. Steam has actual DRM called steamstub which can easily be cracked but this won't crack it for you.
 
 ## Credits
-* **[Mr Goldberg](https://gitlab.com/Mr_Goldberg/goldberg_emulator)** — Huge thanks to the original author for the incredible work on the core emulator!
-* **[SaNNa](https://github.com/OleksandrChornyi2010)** — Modifications and maintenance for Half-Life based games.
+
+- **[SaNNa](https://github.com/OleksandrChornyi2010)** — Modifications and maintenance for Half-Life based games.
+
+- **[Mr Goldberg](https://gitlab.com/Mr_Goldberg/goldberg_emulator)** — Huge thanks to the original author for the incredible work on the core emulator!

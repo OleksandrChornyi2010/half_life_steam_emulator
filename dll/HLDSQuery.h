@@ -20,6 +20,11 @@
 
 #include "base.h"
 
+#ifdef _MSC_VER
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#endif
+
 class HLDSQuery {
     std::string ip_gl;
     int sock;

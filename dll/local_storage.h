@@ -70,6 +70,7 @@ class Local_Storage {
     void setAppId(uint32 appid);
     static int store_file_data(std::string folder, std::string file, char *data, unsigned int length);
     static std::vector<std::string> get_filenames_path(std::string path);
+    static std::string get_utf8_path(const std::filesystem::path &p);
 
     int store_data(std::string folder, std::string file, char *data, unsigned int length);
     int store_data_settings(std::string file, char *data, unsigned int length);

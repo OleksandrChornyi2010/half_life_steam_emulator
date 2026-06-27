@@ -528,6 +528,15 @@ CSteamID Steam_Matchmaking::GetLobbyByIndex(int iLobby) {
     PRINT_DEBUG("Lobby %llu\n", id.ConvertToUint64());
     return id;
 }
+void Steam_Matchmaking::GetLobbyByIndex(CSteamID &ret, int iLobby) {
+    PRINT_DEBUG("GetLobbyByIndex %i\n", iLobby);
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    CSteamID id = k_steamIDNil;
+    if (0 <= iLobby && iLobby < filtered_lobbies.size())
+        id = filtered_lobbies[iLobby];
+    PRINT_DEBUG("Lobby %llu\n", id.ConvertToUint64());
+    ret = id;
+}
 
 bool Steam_Matchmaking::enter_lobby(Lobby *lobby, CSteamID id) {
     if (get_lobby_member(lobby, id))
@@ -753,6 +762,17 @@ CSteamID Steam_Matchmaking::GetLobbyMemberByIndex(CSteamID steamIDLobby, int iMe
         id = (uint64)lobby->members(iMember).id();
     PRINT_DEBUG("Member: %llu\n", id.ConvertToUint64());
     return id;
+}
+
+void Steam_Matchmaking::GetLobbyMemberByIndex(CSteamID &ret, CSteamID steamIDLobby, int iMember) {
+    PRINT_DEBUG("GetLobbyMemberByIndex %llu %i\n", steamIDLobby.ConvertToUint64(), iMember);
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    Lobby *lobby = get_lobby(steamIDLobby);
+    CSteamID id = k_steamIDNil;
+    if (lobby && !lobby->deleted() && lobby->members().size() > iMember && iMember >= 0)
+        id = (uint64)lobby->members(iMember).id();
+    PRINT_DEBUG("Member: %llu\n", id.ConvertToUint64());
+    ret = id;
 }
 
 // Get data associated with this lobby
@@ -1139,6 +1159,18 @@ CSteamID Steam_Matchmaking::GetLobbyOwner(CSteamID steamIDLobby) {
 
     // TODO: might be better to require the lobby info to be at least requested first.
     return (uint64)lobby->owner();
+}
+
+void Steam_Matchmaking::GetLobbyOwner(CSteamID &ret, CSteamID steamIDLobby) {
+    PRINT_DEBUG("GetLobbyOwner %llu\n", steamIDLobby.ConvertToUint64());
+    std::lock_guard<std::recursive_mutex> lock(global_mutex);
+    Lobby *lobby = get_lobby(steamIDLobby);
+    if (!lobby || lobby->deleted()) {
+        ret = k_steamIDNil;
+        return;
+    }
+    // TODO: might be better to require the lobby info to be at least requested first.
+    ret = (uint64)lobby->owner();
 }
 
 // asks the Steam servers for a list of lobbies that friends are in

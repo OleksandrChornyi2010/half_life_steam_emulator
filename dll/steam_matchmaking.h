@@ -212,6 +212,7 @@ class Steam_Matchmaking : public ISteamMatchmaking002,
     // iLobby is of the range [0, LobbyMatchList_t::m_nLobbiesMatching)
     // the returned CSteamID::IsValid() will be false if iLobby is out of range
     CSteamID GetLobbyByIndex(int iLobby);
+    void GetLobbyByIndex(CSteamID &ret, int iLobby);
 
     static bool enter_lobby(Lobby *lobby, CSteamID id);
 
@@ -269,6 +270,7 @@ class Steam_Matchmaking : public ISteamMatchmaking002,
     // iMember is of range [0,GetNumLobbyMembers())
     // note that the current user must be in a lobby to retrieve CSteamIDs of other users in that lobby
     CSteamID GetLobbyMemberByIndex(CSteamID steamIDLobby, int iMember);
+    void GetLobbyMemberByIndex(CSteamID &ret, CSteamID steamIDLobby, int iMember);
 
     // Get data associated with this lobby
     // takes a simple key, and returns the string associated with it
@@ -348,6 +350,7 @@ class Steam_Matchmaking : public ISteamMatchmaking002,
     // there always one lobby owner - if the current owner leaves, another user will become the owner
     // it is possible (bur rare) to join a lobby just as the owner is leaving, thus entering a lobby with self as the owner
     CSteamID GetLobbyOwner(CSteamID steamIDLobby);
+    void GetLobbyOwner(CSteamID &ret, CSteamID steamIDLobby);
 
     // asks the Steam servers for a list of lobbies that friends are in
     // returns results by posting one RequestFriendsLobbiesResponse_t callback per friend/lobby pair

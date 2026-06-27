@@ -29,7 +29,8 @@ static void consume_bom(std::ifstream &input) {
 
 static void load_custom_broadcasts(std::string broadcasts_filepath, std::set<IP_PORT> &custom_broadcasts) {
     PRINT_DEBUG("Broadcasts file path: %s\n", broadcasts_filepath.c_str());
-    std::ifstream broadcasts_file(utf8_decode(broadcasts_filepath));
+    std::filesystem::path path_to_file(utf8_decode(broadcasts_filepath));
+    std::ifstream broadcasts_file(path_to_file);
     consume_bom(broadcasts_file);
     if (broadcasts_file.is_open()) {
         std::string line;
@@ -71,7 +72,8 @@ static void load_gamecontroller_settings(Settings *settings) {
         std::transform(action_set_name.begin(), action_set_name.end(), action_set_name.begin(), [](unsigned char c) { return std::toupper(c); });
 
         std::string controller_config_path = path + PATH_SEPARATOR + p;
-        std::ifstream input(utf8_decode(controller_config_path));
+        std::filesystem::path path_to_file(utf8_decode(controller_config_path));
+        std::ifstream input(path_to_file);
         if (input.is_open()) {
             consume_bom(input);
             std::map<std::string, std::pair<std::set<std::string>, std::string>> button_pairs;
@@ -120,8 +122,7 @@ static void load_gamecontroller_settings(Settings *settings) {
 }
 
 uint32 create_localstorage_settings(Settings **settings_client_out, Settings **settings_server_out, Local_Storage **local_storage_out) {
-    std::string program_path = Local_Storage::get_program_path(), save_path = Local_Storage::get_user_appdata_path();
-    ;
+    std::string program_path = Local_Storage::get_program_path(), save_path = Local_Storage::get_user_appdata_path(); // TODO: Make local save default
 
     PRINT_DEBUG("Current Path %s save_path: %s\n", program_path.c_str(), save_path.c_str());
 
@@ -268,7 +269,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string lang_config_path = Local_Storage::get_game_settings_path() + "supported_languages.txt";
-        std::ifstream input(utf8_decode(lang_config_path));
+        std::filesystem::path path_to_file(utf8_decode(lang_config_path));
+        std::ifstream input(path_to_file);
 
         std::string first_language;
         if (input.is_open()) {
@@ -383,7 +385,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string dlc_config_path = Local_Storage::get_game_settings_path() + "DLC.txt";
-        std::ifstream input(utf8_decode(dlc_config_path));
+        std::filesystem::path path_to_file(utf8_decode(dlc_config_path));
+        std::ifstream input(path_to_file);
         if (input.is_open()) {
             consume_bom(input);
             settings_client->unlockAllDLC(false);
@@ -425,7 +428,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string dlc_config_path = Local_Storage::get_game_settings_path() + "app_paths.txt";
-        std::ifstream input(utf8_decode(dlc_config_path));
+        std::filesystem::path path_to_file(utf8_decode(dlc_config_path));
+        std::ifstream input(path_to_file);
 
         if (input.is_open()) {
             consume_bom(input);
@@ -460,7 +464,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string dlc_config_path = Local_Storage::get_game_settings_path() + "leaderboards.txt";
-        std::ifstream input(utf8_decode(dlc_config_path));
+        std::filesystem::path path_to_file(utf8_decode(dlc_config_path));
+        std::ifstream input(path_to_file);
         if (input.is_open()) {
             consume_bom(input);
             settings_client->setCreateUnknownLeaderboards(false);
@@ -502,7 +507,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string stats_config_path = Local_Storage::get_game_settings_path() + "stats.txt";
-        std::ifstream input(utf8_decode(stats_config_path));
+        std::filesystem::path path_to_file(utf8_decode(stats_config_path));
+        std::ifstream input(path_to_file);
         if (input.is_open()) {
             consume_bom(input);
             for (std::string line; getline(input, line);) {
@@ -567,7 +573,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string depots_config_path = Local_Storage::get_game_settings_path() + "depots.txt";
-        std::ifstream input(utf8_decode(depots_config_path));
+        std::filesystem::path path_to_file(utf8_decode(depots_config_path));
+        std::ifstream input(path_to_file);
         if (input.is_open()) {
             consume_bom(input);
             for (std::string line; getline(input, line);) {
@@ -592,7 +599,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
 
     {
         std::string depots_config_path = Local_Storage::get_game_settings_path() + "subscribed_groups.txt";
-        std::ifstream input(utf8_decode(depots_config_path));
+        std::filesystem::path path_to_file(utf8_decode(depots_config_path));
+        std::ifstream input(path_to_file);
         if (input.is_open()) {
             consume_bom(input);
             for (std::string line; getline(input, line);) {

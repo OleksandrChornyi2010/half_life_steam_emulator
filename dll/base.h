@@ -1,19 +1,20 @@
 /* Copyright (C) 2019 Mr Goldberg
-   This file is part of the half_life_steam_emulator
-
-   The half_life_steam_emulator is free software; you can redistribute it and/or
-   modify it under the terms of the GNU Lesser General Public
-   License as published by the Free Software Foundation; either
-   version 3 of the License, or (at your option) any later version.
-
-   The half_life_steam_emulator is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   Lesser General Public License for more details.
-
-   You should have received a copy of the GNU Lesser General Public
-   License along with the half_life_steam_emulator; if not, see
-   <http://www.gnu.org/licenses/>.  */
+   Copyright (C) 2026 OleksandrChornyi2010 (SaNNa)
+ *   This file is part of the half_life_steam_emulator
+ *
+ *   The half_life_steam_emulator is free software; you can redistribute it and/or
+ *   modify it under the terms of the GNU Lesser General Public
+ *   License as published by the Free Software Foundation; either
+ *   version 3 of the License, or (at your option) any later version.
+ *
+ *   The half_life_steam_emulator is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *   Lesser General Public License for more details.
+ *
+ *   You should have received a copy of the GNU Lesser General Public
+ *   License along with the half_life_steam_emulator; if not, see
+ *   <http://www.gnu.org/licenses/>.  */
 
 #ifndef BASE_INCLUDE
 #define BASE_INCLUDE
@@ -112,7 +113,7 @@ unsigned int file_size_(std::string full_path);
 class SteamCallResults {
     std::vector<struct Steam_Call_Result> callresults;
     std::vector<class CCallbackBase *> completed_callbacks;
-    void (*cb_all)(std::vector<char> result, int callback) = nullptr;
+    void (*cb_all)(const char *data, size_t size, int callback) = nullptr;
 
   public:
     void addCallCompleted(class CCallbackBase *cb) {
@@ -218,11 +219,12 @@ class SteamCallResults {
         return addCallResult(generate_steam_api_call_id(), iCallback, result, size, timeout, run_call_completed_cb);
     }
 
-    void setCbAll(void (*cb_all)(std::vector<char> result, int callback)) {
+    void setCbAll(void (*cb_all)(const char *data, size_t size, int callback)) {
         this->cb_all = cb_all;
     }
 
     void runCallResults() {
+        std::cout << "RunCallResults " << callresults.size() << std::endl;
         unsigned long current_size = callresults.size();
         for (unsigned i = 0; i < current_size; ++i) {
             unsigned index = i;
@@ -244,15 +246,19 @@ class SteamCallResults {
                             PRINT_DEBUG("Calling callresult %p %i\n", cb, cb->GetICallback());
                             global_mutex.unlock();
                             // TODO: unlock relock doesn't work if mutex was locked more than once.
-                            if (run_call_completed_cb) { // run the right function depending on if it's a callback or a call result.
-                                cb->Run(&(result[0]), false, api_call);
-                            } else {
-                                cb->Run(&(result[0]));
+                            if (cb && !result.empty()) {
+                                if (run_call_completed_cb) { // run the right function depending on if it's a callback or a call result.
+                                    cb->Run(&(result[0]), false, api_call);
+                                } else {
+                                    cb->Run(&(result[0]));
+                                }
                             }
+                            std::cout << "cb->Run in temp_cbs iter passed" << std::endl;
                             // COULD BE DELETED SO DON'T TOUCH CB
                             global_mutex.lock();
                             PRINT_DEBUG("callresult done\n");
                         }
+                        std::cout << "ALL cb->Run in temp_cbs iter passed" << std::endl;
                     }
 
                     if (run_call_completed_cb) {
@@ -267,20 +273,23 @@ class SteamCallResults {
                             PRINT_DEBUG("Call complete cb %i %p %llu\n", iCallback, cb, api_call);
                             // TODO: check if this is a problem or not.
                             SteamAPICallCompleted_t temp = data;
-                            global_mutex.unlock();
-                            cb->Run(&temp);
-                            global_mutex.lock();
+                            // global_mutex.unlock(); TODO: Temporary
+                            if (cb)
+                                cb->Run(&temp);
+                            // global_mutex.lock();
+                            std::cout << "cb->Run normal iter passed" << std::endl;
                         }
+                        std::cout << "ALL cb->Run normal iter passed" << std::endl;
 
                         if (cb_all) {
-                            std::vector<char> res;
-                            res.resize(sizeof(data));
-                            memcpy(&(res[0]), &data, sizeof(data));
-                            cb_all(res, data.k_iCallback);
+                            cb_all(reinterpret_cast<const char *>(&data), sizeof(data), iCallback);
                         }
                     } else {
                         if (cb_all) {
-                            cb_all(result, iCallback);
+                            const char *data_ptr = result.empty() ? nullptr : result.data();
+                            size_t data_size = result.size();
+                            std::cout << "Potentional crash on else branch" << std::endl;
+                            cb_all(data_ptr, data_size, iCallback);
                         }
                     }
                 } else {
@@ -304,6 +313,7 @@ class SteamCallResults {
                 ++c;
             }
         }
+        std::cout << "Func finished" << std::endl;
     }
 };
 

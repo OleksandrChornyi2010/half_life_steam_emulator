@@ -29,30 +29,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Find the protobuf compiler and libraries
+set(Protobuf_USE_STATIC_LIBS ON)
 include(FindProtobuf)
 find_package(Protobuf 3.1.0 REQUIRED)
 
-if(UNIX AND NOT APPLE)
-	file(GLOB ABSL_LIBS "/usr/lib32/libabsl_*.a")
-	file(GLOB UTF_LIBS "/usr/lib32/libutf8_*.a")
-
-	set(MY_STATIC_PROTO_DEPS
-			-Wl,--start-group
-			${Protobuf_LIBRARY}
-			${ABSL_LIBS}
-			${UTF_LIBS}
-			-lz
-			-Wl,--end-group
-	)
-
-	set(Protobuf_LIBRARIES ${MY_STATIC_PROTO_DEPS})
-	if(TARGET protobuf::libprotobuf)
-		set_target_properties(protobuf::libprotobuf PROPERTIES
-				INTERFACE_LINK_LIBRARIES "${MY_STATIC_PROTO_DEPS}")
-	endif()
-
-	message(STATUS "Static Protobuf Group enabled with ${Protobuf_LIBRARY}")
-endif()
 # ----------------------------------------------
 # Generate the .h and .cxx files for dll/net.proto
 
@@ -161,13 +141,13 @@ add_library(${LIB_STEAM_API}
   ${DLL_SRC_SHARED}
   ${PROTO_SRCS}
   ${PROTO_HDRS}
-		dll/vdf_parser.cpp
-		dll/vdf_parser.h
-		dll/steam_matchmaking.cpp
 )
+if(MINGW)
+    set_target_properties(${LIB_STEAM_API} PROPERTIES PREFIX "")
+endif()
 
 # Check if post build script exists
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/post_build.sh")
+if(UNIX AND NOT APPLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/post_build.sh" AND CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_custom_command(TARGET ${LIB_STEAM_API}
         POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Running post-build script for ${LIB_STEAM_API}..."

@@ -22,8 +22,20 @@ void HLDSQuery::drain_socket() {
     uint8_t dummy[2048];
     struct sockaddr_in from;
     socklen_t len = sizeof(from);
-    while (recvfrom(sock, dummy, sizeof(dummy), MSG_DONTWAIT, (struct sockaddr *)&from, &len) > 0) {
-        // Just dropping packets
+
+    fd_set read_set;
+    struct timeval tv = {0, 0}; // Zero timeout for immediate return
+
+    while (true) {
+        FD_ZERO(&read_set);
+        FD_SET(sock, &read_set);
+
+        // Check if there is data to read without blocking
+        if (select(sock + 1, &read_set, nullptr, nullptr, &tv) > 0) {
+            recvfrom(sock, (char *)dummy, sizeof(dummy), 0, (struct sockaddr *)&from, &len);
+        } else {
+            break; // Buffer is empty
+        }
     }
 }
 
@@ -61,11 +73,17 @@ HLDSQuery::HLDSQuery(const std::string &ip, uint16_t port) {
     inet_pton(AF_INET, ip.c_str(), &server_addr.sin_addr);
 }
 
-HLDSQuery::~HLDSQuery() { close(sock); }
+HLDSQuery::~HLDSQuery() {
+#ifdef _WIN32
+    closesocket(sock);
+#else
+    close(sock);
+#endif // _WIN32
+}
 
 ssize_t HLDSQuery::send_and_receive(const std::vector<uint8_t> &request, uint8_t *buffer, size_t buf_size) {
-    sendto(sock, request.data(), request.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
-    return recvfrom(sock, buffer, buf_size, 0, nullptr, nullptr);
+    sendto(sock, (const char *)request.data(), request.size(), 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    return recvfrom(sock, (char *)buffer, buf_size, 0, nullptr, nullptr);
 }
 
 void HLDSQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *out_data) { // TODO: Make getting a reference, not a pointer

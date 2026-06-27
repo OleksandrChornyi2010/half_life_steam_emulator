@@ -1,8 +1,9 @@
-//========= Copyright � 1996-2008, Valve LLC, All rights reserved. ============
+//========= Copyright � 1996-2008, Valve LLC, All rights reserved. ===================
 //
 // Purpose:
 //
-//=============================================================================
+// Was modified by OleksandrChornyi2010 (SaNNa) in 2026 for half_life_steam_emulator
+//=====================================================================================
 
 #ifndef STEAMTYPES_H
 #define STEAMTYPES_H
@@ -18,16 +19,66 @@ typedef unsigned steam_bool;
 
 #define S_CALLTYPE __cdecl
 
+// --- DEBUG MACROS START ---
+// --- DEBUG MACROS START ---
+#if defined(_WIN32)
+#pragma message "DEBUG: _WIN32 is DEFINED!"
+#else
+#pragma message "DEBUG: _WIN32 is NOT defined."
+#endif
+
+#if defined(__GNUC__)
+#pragma message "DEBUG: __GNUC__ is DEFINED!"
+#else
+#pragma message "DEBUG: __GNUC__ is NOT defined."
+#endif
+
+#if defined(__MINGW32__)
+#pragma message "DEBUG: __MINGW32__ is DEFINED!"
+#else
+#pragma message "DEBUG: __MINGW32__ is NOT defined."
+#endif
+
+#if defined(_MSC_VER)
+#pragma message "DEBUG: _MSC_VER is DEFINED!"
+#else
+#pragma message "DEBUG: _MSC_VER is NOT defined."
+#endif
+// --- DEBUG MACROS END ---
+
+#if defined(_MSC_VER)
+#pragma message("DEBUG: _MSC_VER is DEFINED!")
+#else
+#pragma message("DEBUG: _MSC_VER is NOT defined.")
+#endif
+// --- DEBUG MACROS END ---
+
+#if defined(_WIN32)
+#if defined(__GNUC__)
+// GCC / MinGW syntax
+#define S_API_THISCALL __attribute__((thiscall))
+#elif defined(_MSC_VER)
+// Microsoft Visual Studio syntax
+#define S_API_THISCALL __thiscall
+#else
+// Fallback for other Windows compilers
+#define S_API_THISCALL
+#endif
+#else
+// Linux / macOS standard Itanium ABI
+#define S_API_THISCALL
+#endif
+
 // Steam-specific types. Defined here so this header file can be included in other code bases.
 #ifndef WCHARTYPES_H
 typedef unsigned char uint8;
 #endif
 
-#if defined( __GNUC__ ) && !defined(POSIX)
-	#if __GNUC__ < 4
-		#error "Steamworks requires GCC 4.X (4.2 or 4.4 have been tested)"
-	#endif
-	#define POSIX 1
+#if defined(__GNUC__) && !defined(POSIX)
+#if __GNUC__ < 4
+#error "Steamworks requires GCC 4.X (4.2 or 4.4 have been tested)"
+#endif
+#define POSIX 1
 #endif
 
 #if defined(__x86_64__) || defined(_WIN64) || defined(__aarch64__)
@@ -42,7 +93,7 @@ typedef unsigned char uint8;
 typedef unsigned char uint8;
 typedef signed char int8;
 
-#if defined( STEAM_WIN32 )
+#if defined(STEAM_WIN32)
 
 typedef __int16 int16;
 typedef unsigned __int16 uint16;
@@ -55,8 +106,8 @@ typedef int64 lint64;
 typedef uint64 ulint64;
 
 #ifdef X64BITS
-typedef __int64 intp;				// intp is an integer that can accomodate a pointer
-typedef unsigned __int64 uintp;		// (ie, sizeof(intp) >= sizeof(int) && sizeof(intp) >= sizeof(void *)
+typedef __int64 intp;           // intp is an integer that can accomodate a pointer
+typedef unsigned __int64 uintp; // (ie, sizeof(intp) >= sizeof(int) && sizeof(intp) >= sizeof(void *)
 #else
 typedef __int32 intp;
 typedef unsigned __int32 uintp;
@@ -91,29 +142,27 @@ typedef unsigned int uintp;
 #endif // else STEAM_WIN32
 
 #ifdef API_GEN
-# define STEAM_CLANG_ATTR(ATTR) __attribute__((annotate( ATTR )))
+#define STEAM_CLANG_ATTR(ATTR) __attribute__((annotate(ATTR)))
 #else
-# define STEAM_CLANG_ATTR(ATTR)
+#define STEAM_CLANG_ATTR(ATTR)
 #endif
 
-#define STEAM_METHOD_DESC(DESC) STEAM_CLANG_ATTR( "desc:" #DESC ";" )
-#define STEAM_IGNOREATTR() STEAM_CLANG_ATTR( "ignore" )
-#define STEAM_OUT_STRUCT() STEAM_CLANG_ATTR( "out_struct: ;" )
-#define STEAM_OUT_STRING() STEAM_CLANG_ATTR( "out_string: ;" )
-#define STEAM_OUT_ARRAY_CALL(COUNTER,FUNCTION,PARAMS) STEAM_CLANG_ATTR( "out_array_call:" #COUNTER "," #FUNCTION "," #PARAMS ";" )
-#define STEAM_OUT_ARRAY_COUNT(COUNTER, DESC) STEAM_CLANG_ATTR( "out_array_count:" #COUNTER  ";desc:" #DESC )
-#define STEAM_ARRAY_COUNT(COUNTER) STEAM_CLANG_ATTR( "array_count:" #COUNTER ";" )
-#define STEAM_ARRAY_COUNT_D(COUNTER, DESC) STEAM_CLANG_ATTR( "array_count:" #COUNTER ";desc:" #DESC )
-#define STEAM_BUFFER_COUNT(COUNTER) STEAM_CLANG_ATTR( "buffer_count:" #COUNTER ";" )
-#define STEAM_OUT_BUFFER_COUNT(COUNTER) STEAM_CLANG_ATTR( "out_buffer_count:" #COUNTER ";" )
-#define STEAM_OUT_STRING_COUNT(COUNTER) STEAM_CLANG_ATTR( "out_string_count:" #COUNTER ";" )
+/* #define STEAM_OUT_STRUCT() STEAM_CLANG_ATTR("out_struct: ;")
+#define STEAM_OUT_STRING() STEAM_CLANG_ATTR("out_string: ;")
+#define STEAM_OUT_ARRAY_CALL(COUNTER, FUNCTION, PARAMS) STEAM_CLANG_ATTR("out_array_call:" #COUNTER "," #FUNCTION "," #PARAMS ";")
+#define STEAM_OUT_ARRAY_COUNT(COUNTER, DESC) STEAM_CLANG_ATTR("out_array_count:" #COUNTER ";desc:" #DESC)
+#define STEAM_ARRAY_COUNT(COUNTER) STEAM_CLANG_ATTR("array_count:" #COUNTER ";")
+#define STEAM_ARRAY_COUNT_D(COUNTER, DESC) STEAM_CLANG_ATTR("array_count:" #COUNTER ";desc:" #DESC)
+#define STEAM_BUFFER_COUNT(COUNTER) STEAM_CLANG_ATTR("buffer_count:" #COUNTER ";")
+#define STEAM_OUT_BUFFER_COUNT(COUNTER) STEAM_CLANG_ATTR("out_buffer_count:" #COUNTER ";")
+#define STEAM_OUT_STRING_COUNT(COUNTER) STEAM_CLANG_ATTR("out_string_count:" #COUNTER ";")
 #define STEAM_DESC(DESC) STEAM_CLANG_ATTR("desc:" #DESC ";")
 #define STEAM_CALL_RESULT(RESULT_TYPE) STEAM_CLANG_ATTR("callresult:" #RESULT_TYPE ";")
 #define STEAM_CALL_BACK(RESULT_TYPE) STEAM_CLANG_ATTR("callback:" #RESULT_TYPE ";")
-#define STEAM_FLAT_NAME(NAME) STEAM_CLANG_ATTR("flat_name:" #NAME ";")
+#define STEAM_FLAT_NAME(NAME) STEAM_CLANG_ATTR("flat_name:" #NAME ";") */
 
-const int k_cubSaltSize   = 8;
-typedef	uint8 Salt_t[ k_cubSaltSize ];
+const int k_cubSaltSize = 8;
+typedef uint8 Salt_t[k_cubSaltSize];
 
 //-----------------------------------------------------------------------------
 // GID (GlobalID) stuff
@@ -126,15 +175,15 @@ typedef uint64 GID_t;
 const GID_t k_GIDNil = 0xffffffffffffffffull;
 
 // For convenience, we define a number of types that are just new names for GIDs
-typedef uint64 JobID_t;			// Each Job has a unique ID
-typedef GID_t TxnID_t;			// Each financial transaction has a unique ID
+typedef uint64 JobID_t; // Each Job has a unique ID
+typedef GID_t TxnID_t;  // Each financial transaction has a unique ID
 
 const GID_t k_TxnIDNil = k_GIDNil;
 const GID_t k_TxnIDUnknown = 0;
 
 const JobID_t k_JobIDNil = 0xffffffffffffffffull;
 
-// this is baked into client messages and interfaces as an int, 
+// this is baked into client messages and interfaces as an int,
 // make sure we never break this.
 typedef uint32 PackageId_t;
 const PackageId_t k_uPackageIdFreeSub = 0x0;
@@ -143,7 +192,7 @@ const PackageId_t k_uPackageIdInvalid = 0xFFFFFFFF;
 typedef uint32 BundleId_t;
 const BundleId_t k_uBundleIdInvalid = 0;
 
-// this is baked into client messages and interfaces as an int, 
+// this is baked into client messages and interfaces as an int,
 // make sure we never break this.
 typedef uint32 AppId_t;
 const AppId_t k_uAppIdInvalid = 0x0;
@@ -154,8 +203,7 @@ const AssetClassId_t k_ulAssetClassIdInvalid = 0x0;
 typedef uint32 PhysicalItemId_t;
 const PhysicalItemId_t k_uPhysicalItemIdInvalid = 0x0;
 
-
-// this is baked into client messages and interfaces as an int, 
+// this is baked into client messages and interfaces as an int,
 // make sure we never break this.  AppIds and DepotIDs also presently
 // share the same namespace, but since we'd like to change that in the future
 // I've defined it seperately here.
@@ -180,7 +228,7 @@ typedef uint32 PartnerId_t;
 const PartnerId_t k_uPartnerIdInvalid = 0;
 
 // ID for a depot content manifest
-typedef uint64 ManifestId_t; 
+typedef uint64 ManifestId_t;
 const ManifestId_t k_uManifestIdInvalid = 0;
 
 // ID for cafe sites
@@ -188,122 +236,107 @@ typedef uint64 SiteId_t;
 const SiteId_t k_ulSiteIdInvalid = 0;
 
 #if defined(_WIN32) && defined(__GNUC__) && !defined(_S4N_)
-	#define STEAMWORKS_STRUCT_RETURN_0(returnType, functionName)	\
-		virtual void functionName( returnType& ret ) = 0;			\
-		inline returnType functionName()							\
-		{															\
-			returnType ret;											\
-			this->functionName(ret);								\
-			return ret;												\
-		}
-	#define STEAMWORKS_STRUCT_RETURN_1(returnType, functionName, arg1Type, arg1Name)	\
-		virtual void functionName( returnType& ret, arg1Type arg1Name ) = 0;			\
-		inline returnType functionName( arg1Type arg1Name )								\
-		{																				\
-			returnType ret;																\
-			this->functionName(ret, arg1Name);											\
-			return ret;																	\
-		}
-	#define STEAMWORKS_STRUCT_RETURN_2(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name)	\
-		virtual void functionName( returnType& ret, arg1Type arg1Name, arg2Type arg2Name ) = 0;				\
-		inline returnType functionName( arg1Type arg1Name, arg2Type arg2Name )								\
-		{																									\
-			returnType ret;																					\
-			this->functionName(ret, arg1Name, arg2Name);													\
-			return ret;																						\
-		}
-	#define STEAMWORKS_STRUCT_RETURN_3(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name, arg3Type, arg3Name)	\
-		virtual void functionName( returnType& ret, arg1Type arg1Name, arg2Type arg2Name, arg3Type arg3Name ) = 0;				\
-		inline returnType functionName( arg1Type arg1Name, arg2Type arg2Name, arg3Type arg3Name )								\
-		{																														\
-			returnType ret;																										\
-			this->functionName(ret, arg1Name, arg2Name, arg3Name);																\
-			return ret;																											\
-		}
+#define STEAMWORKS_STRUCT_RETURN_0(returnType, functionName) \
+    virtual void functionName(returnType &ret) = 0;          \
+    inline returnType functionName() {                       \
+        returnType ret;                                      \
+        this->functionName(ret);                             \
+        return ret;                                          \
+    }
+#define STEAMWORKS_STRUCT_RETURN_1(returnType, functionName, arg1Type, arg1Name) \
+    virtual void functionName(returnType &ret, arg1Type arg1Name) = 0;           \
+    inline returnType functionName(arg1Type arg1Name) {                          \
+        returnType ret;                                                          \
+        this->functionName(ret, arg1Name);                                       \
+        return ret;                                                              \
+    }
+#define STEAMWORKS_STRUCT_RETURN_2(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name) \
+    virtual void functionName(returnType &ret, arg1Type arg1Name, arg2Type arg2Name) = 0;            \
+    inline returnType functionName(arg1Type arg1Name, arg2Type arg2Name) {                           \
+        returnType ret;                                                                              \
+        this->functionName(ret, arg1Name, arg2Name);                                                 \
+        return ret;                                                                                  \
+    }
+#define STEAMWORKS_STRUCT_RETURN_3(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name, arg3Type, arg3Name) \
+    virtual void functionName(returnType &ret, arg1Type arg1Name, arg2Type arg2Name, arg3Type arg3Name) = 0;             \
+    inline returnType functionName(arg1Type arg1Name, arg2Type arg2Name, arg3Type arg3Name) {                            \
+        returnType ret;                                                                                                  \
+        this->functionName(ret, arg1Name, arg2Name, arg3Name);                                                           \
+        return ret;                                                                                                      \
+    }
 #else
-	#define STEAMWORKS_STRUCT_RETURN_0(returnType, functionName) virtual returnType functionName() = 0;
-	#define STEAMWORKS_STRUCT_RETURN_1(returnType, functionName, arg1Type, arg1Name) virtual returnType functionName( arg1Type arg1Name ) = 0;
-	#define STEAMWORKS_STRUCT_RETURN_2(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name) virtual returnType functionName( arg1Type arg1Name, arg2Type arg2Name ) = 0;
-	#define STEAMWORKS_STRUCT_RETURN_3(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name, arg3Type, arg3Name) virtual returnType functionName( arg1Type arg1Name, arg2Type arg2Name, arg3Type arg3Name ) = 0;
+#define STEAMWORKS_STRUCT_RETURN_0(returnType, functionName) virtual returnType functionName() = 0;
+#define STEAMWORKS_STRUCT_RETURN_1(returnType, functionName, arg1Type, arg1Name) virtual returnType functionName(arg1Type arg1Name) = 0;
+#define STEAMWORKS_STRUCT_RETURN_2(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name) virtual returnType functionName(arg1Type arg1Name, arg2Type arg2Name) = 0;
+#define STEAMWORKS_STRUCT_RETURN_3(returnType, functionName, arg1Type, arg1Name, arg2Type, arg2Name, arg3Type, arg3Name) virtual returnType functionName(arg1Type arg1Name, arg2Type arg2Name, arg3Type arg3Name) = 0;
 #endif
 // Party Beacon ID
 typedef uint64 PartyBeaconID_t;
 const PartyBeaconID_t k_ulPartyBeaconIdInvalid = 0;
 
-enum ESteamIPType
-{
-	k_ESteamIPTypeIPv4 = 0,
-	k_ESteamIPTypeIPv6 = 1,
+enum ESteamIPType {
+    k_ESteamIPTypeIPv4 = 0,
+    k_ESteamIPTypeIPv6 = 1,
 };
 
-#pragma pack( push, 1 )
+#pragma pack(push, 1)
 
-struct SteamIPAddress_t
-{
-	union {
+struct SteamIPAddress_t {
+    union {
 
-		uint32			m_unIPv4;		// Host order
-		uint8			m_rgubIPv6[16];		// Network order! Same as inaddr_in6.  (0011:2233:4455:6677:8899:aabb:ccdd:eeff)
+        uint32 m_unIPv4;      // Host order
+        uint8 m_rgubIPv6[16]; // Network order! Same as inaddr_in6.  (0011:2233:4455:6677:8899:aabb:ccdd:eeff)
 
-		// Internal use only
-		uint64			m_ipv6Qword[2];	// big endian
-	};
+        // Internal use only
+        uint64 m_ipv6Qword[2]; // big endian
+    };
 
-	ESteamIPType m_eType;
+    ESteamIPType m_eType;
 
-	bool IsSet() const 
-	{ 
-		if ( k_ESteamIPTypeIPv4 == m_eType )
-		{
-			return m_unIPv4 != 0;
-		}
-		else 
-		{
-			return m_ipv6Qword[0] !=0 || m_ipv6Qword[1] != 0; 
-		}
-	}
+    bool IsSet() const {
+        if (k_ESteamIPTypeIPv4 == m_eType) {
+            return m_unIPv4 != 0;
+        } else {
+            return m_ipv6Qword[0] != 0 || m_ipv6Qword[1] != 0;
+        }
+    }
 
-	static SteamIPAddress_t IPv4Any()
-	{
-		SteamIPAddress_t ipOut;
-		ipOut.m_eType = k_ESteamIPTypeIPv4;
-		ipOut.m_unIPv4 = 0;
+    static SteamIPAddress_t IPv4Any() {
+        SteamIPAddress_t ipOut;
+        ipOut.m_eType = k_ESteamIPTypeIPv4;
+        ipOut.m_unIPv4 = 0;
 
-		return ipOut;
-	}
+        return ipOut;
+    }
 
-	static SteamIPAddress_t IPv6Any()
-	{
-		SteamIPAddress_t ipOut;
-		ipOut.m_eType = k_ESteamIPTypeIPv6;
-		ipOut.m_ipv6Qword[0] = 0;
-		ipOut.m_ipv6Qword[1] = 0;
+    static SteamIPAddress_t IPv6Any() {
+        SteamIPAddress_t ipOut;
+        ipOut.m_eType = k_ESteamIPTypeIPv6;
+        ipOut.m_ipv6Qword[0] = 0;
+        ipOut.m_ipv6Qword[1] = 0;
 
-		return ipOut;
-	}
+        return ipOut;
+    }
 
-	static SteamIPAddress_t IPv4Loopback()
-	{
-		SteamIPAddress_t ipOut;
-		ipOut.m_eType = k_ESteamIPTypeIPv4;
-		ipOut.m_unIPv4 = 0x7f000001;
+    static SteamIPAddress_t IPv4Loopback() {
+        SteamIPAddress_t ipOut;
+        ipOut.m_eType = k_ESteamIPTypeIPv4;
+        ipOut.m_unIPv4 = 0x7f000001;
 
-		return ipOut;
-	}
+        return ipOut;
+    }
 
-	static SteamIPAddress_t IPv6Loopback()
-	{
-		SteamIPAddress_t ipOut;
-		ipOut.m_eType = k_ESteamIPTypeIPv6;
-		ipOut.m_ipv6Qword[0] = 0;
-		ipOut.m_ipv6Qword[1] = 0;
-		ipOut.m_rgubIPv6[15] = 1;
+    static SteamIPAddress_t IPv6Loopback() {
+        SteamIPAddress_t ipOut;
+        ipOut.m_eType = k_ESteamIPTypeIPv6;
+        ipOut.m_ipv6Qword[0] = 0;
+        ipOut.m_ipv6Qword[1] = 0;
+        ipOut.m_rgubIPv6[15] = 1;
 
-		return ipOut;
-	}
+        return ipOut;
+    }
 };
 
-#pragma pack( pop )
-
+#pragma pack(pop)
 
 #endif // STEAMTYPES_H

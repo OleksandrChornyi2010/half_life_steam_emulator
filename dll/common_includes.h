@@ -1,4 +1,5 @@
 /* Copyright (C) 2019 Mr Goldberg
+   Copyright (C) 2026 OleksandrChornyi2010 (SaNNa)
    This file is part of the half_life_steam_emulator
 
    The half_life_steam_emulator is free software; you can redistribute it and/or
@@ -51,11 +52,11 @@
 
 #if defined(__WINDOWS__)
 #include <direct.h>
+#include <winsock2.h>
 #include <iphlpapi.h> // Include winsock2 before this, or winsock2 iphlpapi will be unavailable
 #include <processthreadsapi.h>
 #include <shlobj.h>
 #include <windows.h>
-#include <winsock2.h>
 #include <ws2tcpip.h>
 
 #define MSG_NOSIGNAL 0
@@ -65,13 +66,13 @@
 #undef SystemFunction036
 
 #ifndef EMU_RELEASE_BUILD
-#define PRINT_DEBUG(a, ...)                                     \
-    do {                                                        \
-        FILE *t = fopen("STEAM_LOG.txt", "a");                  \
-        fprintf(t, "%u " a, GetCurrentThreadId(), __VA_ARGS__); \
-        fclose(t);                                              \
-        WSASetLastError(0);                                     \
-    } while (0)
+#define PRINT_DEBUG(a, ...)
+// do {                                                        \
+//     FILE *t = fopen("STEAM_LOG.txt", "a");                  \
+//     fprintf(t, "%u " a, GetCurrentThreadId(), __VA_ARGS__); \
+//     fclose(t);                                              \
+//     WSASetLastError(0);                                     \
+// } while (0)
 #endif
 
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
@@ -114,7 +115,6 @@ inline void reset_LastError() {
 #include <sys/ioctl.h>
 #include <sys/mount.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -151,10 +151,12 @@ inline void reset_LastError() {
 #include <chrono>
 #include <cstdint>
 #include <fstream>
+#include <filesystem>
 #include <iomanip>
 #include <iterator>
 #include <sstream>
 #include <string>
+#include <sys/stat.h>
 
 #include <list>
 #include <map>

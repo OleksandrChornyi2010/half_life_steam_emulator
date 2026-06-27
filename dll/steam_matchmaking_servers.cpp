@@ -160,8 +160,7 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(
         }
 
         // Launching ProcessSingleServer in a separate thread
-        futures.push_back(std::async(std::launch::async, [this, &server, type,
-                                                          request_index, id]() {
+        futures.push_back(std::async(std::launch::async, [this, &server, type, request_index, id]() {
       Steam_Matchmaking_Servers_Gameserver g{};
       ProcessSingleServer(server, type, g);
 
@@ -172,8 +171,7 @@ void Steam_Matchmaking_Servers::RefreshServersFromFile(
         }
       }
       gameservers.push_back(g);
-      std::cout << "Added server: " << server.ip << ":" << server.port
-                << " appid: " << g.server.appid() << std::endl; }));
+      std::cout << "Added server: " << server.ip << ":" << server.port << " appid: " << g.server.appid() << std::endl; }));
         // ProcessSingleServer(server, type);
     }
 
@@ -279,11 +277,7 @@ HServerListRequest Steam_Matchmaking_Servers::RequestFriendsServerList(
     return RequestServerList(iApp, pRequestServersResponse, eFriendsServer);
 }
 
-HServerListRequest Steam_Matchmaking_Servers::RequestFavoritesServerList(
-    AppId_t iApp,
-    STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters,
-    uint32 nFilters,
-    ISteamMatchmakingServerListResponse *pRequestServersResponse) {
+HServerListRequest Steam_Matchmaking_Servers::RequestFavoritesServerList(AppId_t iApp, STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse *pRequestServersResponse) {
     PRINT_DEBUG("RequestFavoritesServerList\n");
     /*     if (ppchFilters && nFilters > 0) {
             std::cout << "--- Filters for AppID " << iApp << " (" << nFilters
@@ -305,11 +299,7 @@ HServerListRequest Steam_Matchmaking_Servers::RequestFavoritesServerList(
     return RequestServerList(iApp, pRequestServersResponse, eFavoritesServer);
 }
 
-HServerListRequest Steam_Matchmaking_Servers::RequestHistoryServerList(
-    AppId_t iApp,
-    STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters,
-    uint32 nFilters,
-    ISteamMatchmakingServerListResponse *pRequestServersResponse) {
+HServerListRequest Steam_Matchmaking_Servers::RequestHistoryServerList(AppId_t iApp, STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters, ISteamMatchmakingServerListResponse *pRequestServersResponse) {
     PRINT_DEBUG("RequestHistoryServerList\n");
     return RequestServerList(iApp, pRequestServersResponse, eHistoryServer);
 }

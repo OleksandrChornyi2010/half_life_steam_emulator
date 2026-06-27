@@ -1,4 +1,5 @@
 /* Copyright (C) 2019 Mr Goldberg
+   Copyright (C) 2026 OleksandrChornyi2010 (SaNNa)
    This file is part of the half_life_steam_emulator
 
    The half_life_steam_emulator is free software; you can redistribute it and/or
@@ -44,7 +45,8 @@ static char old_video[128] = "STEAMVIDEO_INTERFACE_V001";
 static char old_masterserver_updater[128] = "SteamMasterServerUpdater001";
 
 static bool try_load_steam_interfaces(std::string interfaces_path) {
-    std::ifstream input(utf8_decode(interfaces_path));
+    std::filesystem::path path_to_file(utf8_decode(interfaces_path));
+    std::ifstream input(path_to_file);
     if (!input.is_open()) {
         return false;
     }
@@ -825,17 +827,23 @@ struct cb_data {
 static std::queue<struct cb_data> client_cb;
 static std::queue<struct cb_data> server_cb;
 
-static void cb_add_queue_server(std::vector<char> result, int callback) {
+static void cb_add_queue_server(const char *data, size_t size, int callback) {
     struct cb_data cb;
     cb.cb_id = callback;
-    cb.result = result;
+    if (data != nullptr && size > 0) {
+        cb.result.assign(data, data + size);
+        std::cout << "Queue_Server result assigned" << std::endl;
+    }
     server_cb.push(cb);
 }
 
-static void cb_add_queue_client(std::vector<char> result, int callback) {
+static void cb_add_queue_client(const char *data, size_t size, int callback) {
     struct cb_data cb;
     cb.cb_id = callback;
-    cb.result = result;
+    if (data != nullptr && size > 0) {
+        cb.result.assign(data, data + size);
+        std::cout << "Queue_client result assigned" << std::endl;
+    }
     client_cb.push(cb);
 }
 

@@ -34,6 +34,8 @@
 struct File_Data {
     std::string name;
 };
+std::string Local_Storage::data_path;
+uint32 Local_Storage::i_appid = 0; // TODO: Set to const DEFAULT_APPID
 
 #ifdef NO_DISK_WRITES
 std::string Local_Storage::get_program_path() {
@@ -139,178 +141,19 @@ bool Local_Storage::save_screenshot(std::string const &image_path, uint8_t *img_
 }
 
 #else
-#if defined(__WINDOWS__)
 
-static BOOL DirectoryExists(LPCWSTR szPath) {
-    DWORD dwAttrib = GetFileAttributesW(szPath);
-
-    return (dwAttrib != INVALID_FILE_ATTRIBUTES &&
-            (dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+static void create_directory(const std::string &in_path) {
+    std::filesystem::path dir_path(utf8_decode(in_path));
+    std::filesystem::create_directories(dir_path);
 }
 
-static void createDirectoryRecursively(std::wstring path) {
-    unsigned long long pos = 0;
-    do {
-        pos = path.find_first_of(L"\\/", pos + 1);
-        CreateDirectoryW(path.substr(0, pos).c_str(), NULL);
-    } while (pos != std::string::npos);
+static void trim_filename_and_create_directory(const std::string &full_path) {
+    std::filesystem::path p(utf8_decode(full_path));
+    std::filesystem::create_directories(p.parent_path());
 }
 
-static void create_directory(std::string in_path) {
-    std::wstring strPath = utf8_decode(in_path);
-    if (DirectoryExists(strPath.c_str()) == FALSE)
-        createDirectoryRecursively(strPath);
-}
-
-static std::vector<struct File_Data> get_filenames(std::string in_path) {
-    std::vector<struct File_Data> output;
-    in_path = in_path.append("\\*");
-    WIN32_FIND_DATAW ffd;
-    HANDLE hFind = INVALID_HANDLE_VALUE;
-
-    std::wstring strPath = utf8_decode(in_path);
-    // Start iterating over the files in the path directory.
-    hFind = ::FindFirstFileW(strPath.c_str(), &ffd);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do // Managed to locate and create an handle to that folder.
-        {
-            if (wcscmp(L".", ffd.cFileName) == 0)
-                continue;
-            if (wcscmp(L"..", ffd.cFileName) == 0)
-                continue;
-            struct File_Data f_data;
-            f_data.name = utf8_encode(ffd.cFileName);
-            output.push_back(f_data);
-        } while (::FindNextFileW(hFind, &ffd) == TRUE);
-        ::FindClose(hFind);
-    } else {
-        // printf("Failed to find path: %s", strPath.c_str());
-    }
-
-    return output;
-}
-
-static std::vector<struct File_Data> get_filenames_recursive_w(std::wstring base_path) {
-    if (base_path.back() == *L"\\")
-        base_path.pop_back();
-    std::vector<struct File_Data> output;
-    std::wstring strPath = base_path;
-    strPath = strPath.append(L"\\*");
-    WIN32_FIND_DATAW ffd;
-    HANDLE hFind = INVALID_HANDLE_VALUE;
-
-    // Start iterating over the files in the path directory.
-    hFind = ::FindFirstFileW(strPath.c_str(), &ffd);
-    if (hFind != INVALID_HANDLE_VALUE) {
-        do // Managed to locate and create an handle to that folder.
-        {
-            if (wcscmp(L".", ffd.cFileName) == 0)
-                continue;
-            if (wcscmp(L"..", ffd.cFileName) == 0)
-                continue;
-            if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                // Construct new path from our base path
-                std::wstring dir_name = ffd.cFileName;
-
-                std::wstring path = base_path;
-                path += L"\\";
-                path += dir_name;
-
-                std::vector<struct File_Data> lower = get_filenames_recursive_w(path);
-                std::transform(lower.begin(), lower.end(), std::back_inserter(output), [&dir_name](File_Data f) {f.name = utf8_encode(dir_name) + "\\" + f.name; return f; });
-            } else {
-                File_Data f;
-                f.name = utf8_encode(ffd.cFileName);
-                output.push_back(f);
-            }
-        } while (::FindNextFileW(hFind, &ffd) == TRUE);
-        ::FindClose(hFind);
-    } else {
-        // printf("Failed to find path: %s", strPath.c_str());
-    }
-
-    reset_LastError();
-    return output;
-}
-
-static std::vector<struct File_Data> get_filenames_recursive(std::string base_path) {
-    return get_filenames_recursive_w(utf8_decode(base_path));
-}
-
-#else
-std::string Local_Storage::data_path;
-uint32 Local_Storage::i_appid = 0; // TODO: Set to const DEFAULT_APPID
-/* recursive mkdir */
-static int mkdir_p(const char *dir, const mode_t mode) {
-    char tmp[PATH_MAX_STRING_SIZE];
-    char *p = NULL;
-    struct stat sb;
-    size_t len;
-
-    /* copy path */
-    len = strnlen(dir, PATH_MAX_STRING_SIZE);
-    if (len == 0 || len == PATH_MAX_STRING_SIZE) {
-        return -1;
-    }
-    memcpy(tmp, dir, len);
-    tmp[len] = '\0';
-
-    /* remove trailing slash */
-    if (tmp[len - 1] == '/') {
-        tmp[len - 1] = '\0';
-    }
-
-    /* check if path exists and is a directory */
-    if (stat(tmp, &sb) == 0) {
-        if (S_ISDIR(sb.st_mode)) {
-            return 0;
-        }
-    }
-
-    /* recursive mkdir */
-    for (p = tmp + 1; *p; p++) {
-        if (*p == '/') {
-            *p = 0;
-            /* test path */
-            if (stat(tmp, &sb) != 0) {
-                /* path does not exist - create directory */
-                if (mkdir(tmp, mode) < 0) {
-                    return -1;
-                }
-            } else if (!S_ISDIR(sb.st_mode)) {
-                /* not a directory */
-                return -1;
-            }
-            *p = '/';
-        }
-    }
-    /* test path */
-    if (stat(tmp, &sb) != 0) {
-        /* path does not exist - create directory */
-        if (mkdir(tmp, mode) < 0) {
-            return -1;
-        }
-    } else if (!S_ISDIR(sb.st_mode)) {
-        /* not a directory */
-        return -1;
-    }
-    return 0;
-}
-
-static void create_directory(std::string strPath) {
-    mkdir_p(strPath.c_str(), 0777);
-}
-
-static void trim_filename_and_create_directory(std::string full_path) {
-    size_t pos = full_path.find_last_of("/\\");
-    if (pos != std::string::npos) {
-        std::string folder = full_path.substr(0, pos);
-        create_directory(folder);
-    }
-}
-
-static void touch_file(const std::string &filename) {
-    std::ofstream file(filename, std::ios::app); // std::ios::app - append mode; don't remove contets of the file if it exists
+static void touch_file(const std::filesystem::path &file_path) {
+    std::ofstream file(file_path, std::ios::app); // std::ios::app - append mode; don't remove contents of the file if it exists
     file.close();
 }
 
@@ -321,77 +164,68 @@ bool Local_Storage::safe_create_file(std::string full_path) {
     if (file_exists_(full_path)) {
         return false;
     }
-    trim_filename_and_create_directory(full_path);
-    touch_file(full_path);
+
+    std::filesystem::path p(utf8_decode(full_path));
+    std::filesystem::create_directories(p.parent_path());
+    touch_file(p);
+
     return true;
 }
 
-static std::vector<struct File_Data> get_filenames(std::string strPath) {
-    DIR *dp;
-    int i = 0;
-    struct dirent *ep;
-    std::vector<struct File_Data> output;
-    dp = opendir(strPath.c_str());
-
-    if (dp != NULL) {
-        while ((ep = readdir(dp))) {
-            if (memcmp(ep->d_name, ".", 2) != 0 && memcmp(ep->d_name, "..", 3) != 0) {
-                struct File_Data f_data;
-                f_data.name = ep->d_name;
-                output.push_back(f_data);
-                i++;
-            }
-        }
-
-        (void)closedir(dp);
-    }
-
-    return output;
-}
-
-static std::vector<struct File_Data> get_filenames_recursive(std::string base_path) {
-    std::vector<struct File_Data> output;
-    std::string path;
-    struct dirent *dp;
-    DIR *dir = opendir(base_path.c_str());
-
-    // Unable to open directory stream
-    if (!dir)
-        return output;
-
-    while ((dp = readdir(dir)) != NULL) {
-        if (strcmp(dp->d_name, ".") != 0 && strcmp(dp->d_name, "..") != 0) {
-            if (dp->d_type == DT_REG) {
-                File_Data f;
-                f.name = dp->d_name;
-                output.push_back(f);
-            } else if (dp->d_type == DT_DIR) {
-                // Construct new path from our base path
-                std::string dir_name = dp->d_name;
-
-                path = base_path;
-                path += "/";
-                path += dir_name;
-
-                std::vector<struct File_Data> lower = get_filenames_recursive(path);
-                std::transform(lower.begin(), lower.end(), std::back_inserter(output), [&dir_name](File_Data f) {f.name = dir_name + "/" + f.name; return f; });
-            }
-        }
-    }
-
-    closedir(dir);
-
-    return output;
-}
-
+static std::string get_utf8_path(const std::filesystem::path &p) {
+#if defined(_WIN32) || defined(STEAM_WIN32)
+    return utf8_encode(p.wstring());
+#else
+    return p.string();
 #endif
+}
+
+static std::vector<struct File_Data> get_filenames(const std::string &in_path) {
+    std::vector<struct File_Data> output;
+    std::filesystem::path dir_path(utf8_decode(in_path));
+    std::error_code ec;
+    if (std::filesystem::exists(dir_path, ec) && std::filesystem::is_directory(dir_path, ec)) {
+        for (const auto &entry : std::filesystem::directory_iterator(dir_path, ec)) {
+            struct File_Data f_data;
+            f_data.name = get_utf8_path(entry.path().filename());
+            output.push_back(f_data);
+        }
+    }
+
+    return output;
+}
+
+static std::vector<struct File_Data> get_filenames_recursive(const std::string &base_path) {
+    std::vector<struct File_Data> output;
+    std::filesystem::path dir_path(utf8_decode(base_path));
+    std::error_code ec;
+
+    if (std::filesystem::exists(dir_path, ec) && std::filesystem::is_directory(dir_path, ec)) {
+        for (const auto &entry : std::filesystem::recursive_directory_iterator(dir_path, ec)) {
+            if (entry.is_regular_file(ec)) {
+                struct File_Data f;
+                std::filesystem::path rel_path = std::filesystem::relative(entry.path(), dir_path, ec);
+
+                f.name = get_utf8_path(rel_path);
+
+                // Force UNIX style slashes '/' on Windows if required by the emulator
+                // std::replace(f.name.begin(), f.name.end(), '\\', '/');
+
+                output.push_back(f);
+            }
+        }
+    }
+
+    reset_LastError();
+    return output;
+}
 
 std::string Local_Storage::get_program_path() {
     return get_full_program_path();
 }
 
 std::string Local_Storage::get_history_file_path() {
-    return get_program_path() + platform_folder + PATH_SEPARATOR + config_folder + PATH_SEPARATOR + historyFileName;
+    return data_path + PATH_SEPARATOR + platform_folder + PATH_SEPARATOR + historyFileName;
 }
 
 std::string Local_Storage::get_game_settings_path() {
@@ -482,29 +316,30 @@ void Local_Storage::setAppId(uint32 appid) {
     this->appid = std::to_string(appid) + PATH_SEPARATOR;
 }
 
-int Local_Storage::store_file_data(std::string folder, std::string file, char *data, unsigned int length) {
+int Local_Storage::store_file_data(std::string folder, std::string filepath, char *data, unsigned int length) {
     if (folder.back() != *PATH_SEPARATOR) {
         folder.append(PATH_SEPARATOR);
     }
 
-    file = sanitize_file_name(file);
-    std::string::size_type pos = file.rfind(PATH_SEPARATOR);
+    filepath = sanitize_file_name(filepath);
+    std::string::size_type pos = filepath.rfind(PATH_SEPARATOR);
 
     std::string file_folder;
     if (pos == 0 || pos == std::string::npos) {
         file_folder = "";
     } else {
-        file_folder = file.substr(0, pos);
+        file_folder = filepath.substr(0, pos);
     }
 
     create_directory(folder + file_folder);
-    std::ofstream myfile;
-    myfile.open(utf8_decode(folder + file), std::ios::binary | std::ios::out);
-    if (!myfile.is_open())
+    std::ofstream file;
+    std::filesystem::path path_to_file(utf8_decode(folder + filepath));
+    file.open(path_to_file, std::ios::binary | std::ios::out);
+    if (!file.is_open())
         return -1;
-    myfile.write(data, length);
-    int position = myfile.tellp();
-    myfile.close();
+    file.write(data, length);
+    int position = file.tellp();
+    file.close();
     return position;
 }
 
@@ -541,16 +376,17 @@ int Local_Storage::store_data_settings(std::string file, char *data, unsigned in
 }
 
 int Local_Storage::get_file_data(std::string full_path, char *data, unsigned int max_length, unsigned int offset) {
-    std::ifstream myfile;
-    myfile.open(utf8_decode(full_path), std::ios::binary | std::ios::in);
-    if (!myfile.is_open())
+    std::ifstream file;
+    std::filesystem::path path_to_file(utf8_decode(full_path));
+    file.open(path_to_file, std::ios::binary | std::ios::in);
+    if (!file.is_open())
         return -1;
 
-    myfile.seekg(offset, std::ios::beg);
-    myfile.read(data, max_length);
-    myfile.close();
+    file.seekg(offset, std::ios::beg);
+    file.read(data, max_length);
+    file.close();
     reset_LastError();
-    return myfile.gcount();
+    return file.gcount();
 }
 
 int Local_Storage::get_data(std::string folder, std::string file, char *data, unsigned int max_length, unsigned int offset) {
@@ -675,7 +511,8 @@ bool Local_Storage::update_save_filenames(std::string folder) {
 }
 
 bool Local_Storage::load_json(std::string full_path, nlohmann::json &json) {
-    std::ifstream inventory_file(utf8_decode(full_path));
+    std::filesystem::path path_to_file(utf8_decode(full_path));
+    std::ifstream inventory_file(path_to_file);
     // If there is a file and we opened it
     if (inventory_file) {
         inventory_file.seekg(0, std::ios::end);
@@ -720,8 +557,8 @@ bool Local_Storage::write_json_file(std::string folder, std::string const &file,
     std::string full_path = inv_path + file;
 
     create_directory(inv_path);
-
-    std::ofstream inventory_file(utf8_decode(full_path), std::ios::trunc | std::ios::out);
+    std::filesystem::path path_to_file(utf8_decode(full_path));
+    std::ofstream inventory_file(path_to_file, std::ios::trunc | std::ios::out);
     if (inventory_file) {
         inventory_file << std::setw(2) << json;
         return true;

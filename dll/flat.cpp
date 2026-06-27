@@ -17,8 +17,8 @@
 
 #ifndef STEAMCLIENT_DLL
 #define STEAM_API_FUNCTIONS_IMPL
-#include "../sdk_includes/steam_api_flat.h"
 #include "dll.h"
+#include "../sdk_includes/steam_api_flat.h"
 
 STEAMAPI_API HSteamPipe SteamAPI_ISteamClient_CreateSteamPipe(ISteamClient *self) {
     return get_steam_client()->CreateSteamPipe();
