@@ -12,8 +12,6 @@ Put a steam_appid.txt file that contains the appid of the game right beside it i
 
 If your game has an original steam_api(64).dll or libsteam_api.so older than may 2016 (On windows: Properties->Digital Signatures->Timestamp) you might have to add a steam_interfaces.txt beside my emulator library if the game isn't working. There is a linux script to generate it in the scripts folder of this repo.
 
-I also recommend adding local_save.txt to the game directory and writing a folder name (e.g. "steam_data") to save your steam data locally for each game.
-
 For more information see: [The Release Readme](Readme_release.txt)
 
 ## Download Binaries

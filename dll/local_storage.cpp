@@ -413,6 +413,12 @@ int Local_Storage::count_files(std::string folder) {
     return get_filenames_recursive(save_directory + appid + folder).size();
 }
 
+bool Local_Storage::path_exists(const std::string &full_path) {
+    std::filesystem::path target_path(utf8_decode(full_path));
+    std::error_code ec;
+    return std::filesystem::exists(target_path, ec);
+}
+
 bool Local_Storage::file_exists(std::string folder, std::string file) {
     file = sanitize_file_name(file);
     if (folder.back() != *PATH_SEPARATOR) {

@@ -19,40 +19,6 @@ typedef unsigned steam_bool;
 
 #define S_CALLTYPE __cdecl
 
-// --- DEBUG MACROS START ---
-// --- DEBUG MACROS START ---
-#if defined(_WIN32)
-#pragma message "DEBUG: _WIN32 is DEFINED!"
-#else
-#pragma message "DEBUG: _WIN32 is NOT defined."
-#endif
-
-#if defined(__GNUC__)
-#pragma message "DEBUG: __GNUC__ is DEFINED!"
-#else
-#pragma message "DEBUG: __GNUC__ is NOT defined."
-#endif
-
-#if defined(__MINGW32__)
-#pragma message "DEBUG: __MINGW32__ is DEFINED!"
-#else
-#pragma message "DEBUG: __MINGW32__ is NOT defined."
-#endif
-
-#if defined(_MSC_VER)
-#pragma message "DEBUG: _MSC_VER is DEFINED!"
-#else
-#pragma message "DEBUG: _MSC_VER is NOT defined."
-#endif
-// --- DEBUG MACROS END ---
-
-#if defined(_MSC_VER)
-#pragma message("DEBUG: _MSC_VER is DEFINED!")
-#else
-#pragma message("DEBUG: _MSC_VER is NOT defined.")
-#endif
-// --- DEBUG MACROS END ---
-
 #if defined(_WIN32)
 #if defined(__GNUC__)
 // GCC / MinGW syntax

@@ -47,6 +47,7 @@ class Local_Storage {
     static constexpr auto stats_storage_folder = "stats";
     static constexpr auto leaderboard_storage_folder = "leaderboard";
     static constexpr auto user_data_storage = "local";
+    static constexpr auto local_data_dir = "steam_data";
     static constexpr auto screenshots_folder = "screenshots";
     static constexpr auto game_settings_folder = "steam_settings";
     static constexpr auto platform_folder = "platform";
@@ -80,6 +81,7 @@ class Local_Storage {
     int count_files(std::string folder);
     bool iterate_file(std::string folder, int index, char *output_filename, int32 *output_size);
     bool file_exists(std::string folder, std::string file);
+    static bool path_exists(const std::string &full_path);
     unsigned int file_size(std::string folder, std::string file);
     bool file_delete(std::string folder, std::string file);
     uint64_t file_timestamp(std::string folder, std::string file);

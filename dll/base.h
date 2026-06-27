@@ -224,7 +224,6 @@ class SteamCallResults {
     }
 
     void runCallResults() {
-        std::cout << "RunCallResults " << callresults.size() << std::endl;
         unsigned long current_size = callresults.size();
         for (unsigned i = 0; i < current_size; ++i) {
             unsigned index = i;
@@ -313,7 +312,6 @@ class SteamCallResults {
                 ++c;
             }
         }
-        std::cout << "Func finished" << std::endl;
     }
 };
 

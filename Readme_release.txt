@@ -16,8 +16,7 @@ You can also just get a hex editor and search for them (Search for the string: S
 If the game has DRM (other than steamworks) you need to remove/crack it first.
 
 
-Default save location: C:\Users\<Your windows user name>\AppData\Roaming\Goldberg SteamEmu Saves\
-For linux: $XDG_DATA_HOME/Goldberg SteamEmu Saves/ or if it's not defined: $HOME/.local/share/Goldberg SteamEmu Saves/
+Default save location is in the same directory, as the emulator lib.
 
 In the settings folder in that save location you will find 3 files (if you have used the emulator at least once):
 account_name.txt (Edit this file to change your name)
@@ -25,16 +24,18 @@ listen_port.txt (Edit this file if you want to change the UDP/TCP port the emula
 user_steam_id.txt (this is where your steam id is saved, you can change it (if your saves for a game are locked to a specific steam id see below for a way to change it on a per game basis) but it has to be valid)
 language.txt (Edit this to change the language the emulator will report to the game, default is english, it must be a valid steam language name or the game might have weird behaviour (list provided at the end of this readme))
 
-Note that these are global so you won't have to change them for each game. For game unique stuff (stats and remote storage) a folder is created with the appid of the game.
+Note that these are local so you would have to change them for each game.
+
+If you want the emulator to save steam data the system's app data directory (For windows C:\Users\<Your windows user name>\AppData\Roaming\Goldberg SteamEmu Saves\
+For linux: $XDG_DATA_HOME/Goldberg SteamEmu Saves/ or if it's not defined: $HOME/.local/share/Goldberg SteamEmu Saves/) you can create a file named global_save.txt right beside steam_api(64).dll (libsteam_api.so on linux)
+This can be useful if you want to use same global settings like same account name or steam id for all games. 
+
+For game unique stuff (stats and remote storage) a folder is created with the appid of the game.
 If you want to change your steam_id on a per game basis, simply create a settings folder in the game unique directory (Full path: C:\Users\<Your windows user name>\AppData\Roaming\Goldberg SteamEmu Saves\<appid>\settings)
 In that settings folder create a user_steam_id.txt file that contains the valid steam id that you want to use for that game only.
 
-You can also make the emu ignore certain global settings by using a force_account_name.txt, force_language.txt, force_listen_port.txt or force_steamid.txt that you put in the <path where my emu lib is>\steam_settings\ folder.
+You can also make the emu ignore certain global settings by using a force_account_name.txt, force_language.txt, force_listen_port.txt or force_steamid.txt that you put in the <path where the emu lib is>\steam_settings\ folder.
 See the steam_settings.EXAMPLE folder for an example.
-
-If for some reason you want it to save in the game directory you can create a file named local_save.txt right beside steam_api(64).dll (libsteam_api.so on linux)
-The only thing that file should contain is the name of the save directory. This can be useful if you want to use different global settings like a different account name or steam id for a particular game.
-Note that this save directory will be beside where the emu dll (or .so) is which may not be the same as the game path.
 
 DLC:
 By default the emulator will try to unlock all DLCs (by returning true when the game calls the BIsDlcInstalled function). If the game uses the other function you will need to

@@ -122,7 +122,7 @@ static void load_gamecontroller_settings(Settings *settings) {
 }
 
 uint32 create_localstorage_settings(Settings **settings_client_out, Settings **settings_server_out, Local_Storage **local_storage_out) {
-    std::string program_path = Local_Storage::get_program_path(), save_path = Local_Storage::get_user_appdata_path(); // TODO: Make local save default
+    std::string program_path = Local_Storage::get_program_path(), save_path = program_path + Settings::sanitize(Local_Storage::local_data_dir);
 
     PRINT_DEBUG("Current Path %s save_path: %s\n", program_path.c_str(), save_path.c_str());
 
@@ -186,14 +186,11 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
         }
     }
 
-    bool local_save = false;
+    bool local_save = true;
 
-    {
-        char array[33] = {};
-        if (Local_Storage::get_file_data(program_path + "local_save.txt", array, sizeof(array) - 1) != -1) {
-            save_path = program_path + Settings::sanitize(array);
-            local_save = true;
-        }
+    if (Local_Storage::path_exists(program_path + "global_save.txt")) {
+        save_path = Local_Storage::get_user_appdata_path();
+        local_save = false;
     }
 
     PRINT_DEBUG("Set save_path: %s\n", save_path.c_str());
