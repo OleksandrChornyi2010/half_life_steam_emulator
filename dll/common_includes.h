@@ -58,6 +58,9 @@
 #include <shlobj.h>
 #include <windows.h>
 #include <ws2tcpip.h>
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+typedef long suseconds_t;
 
 #define MSG_NOSIGNAL 0
 
@@ -197,10 +200,10 @@ inline std::string ascii_to_lowercase(std::string data) {
 #define SERVER_HSTEAMUSER 1
 
 #define DEFAULT_NAME "Player"
-#define PROGRAM_NAME_1 "Go"
-#define PROGRAM_NAME_2 "ld"
-#define PROGRAM_NAME_3 "be"
-#define PROGRAM_NAME_4 "rg "
+#define PROGRAM_NAME_1 "Ha"
+#define PROGRAM_NAME_2 "lf"
+#define PROGRAM_NAME_3 "Li"
+#define PROGRAM_NAME_4 "fe "
 #define PROGRAM_NAME_5 "St"
 #define PROGRAM_NAME_6 "ea"
 #define PROGRAM_NAME_7 "mE"

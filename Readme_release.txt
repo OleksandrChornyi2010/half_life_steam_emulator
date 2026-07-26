@@ -26,12 +26,12 @@ language.txt (Edit this to change the language the emulator will report to the g
 
 Note that these are local so you would have to change them for each game.
 
-If you want the emulator to save steam data the system's app data directory (For windows C:\Users\<Your windows user name>\AppData\Roaming\Goldberg SteamEmu Saves\
-For linux: $XDG_DATA_HOME/Goldberg SteamEmu Saves/ or if it's not defined: $HOME/.local/share/Goldberg SteamEmu Saves/) you can create a file named global_save.txt right beside steam_api(64).dll (libsteam_api.so on linux)
+If you want the emulator to save steam data the system's app data directory (For windows C:\Users\<Your windows user name>\AppData\Roaming\HalfLife SteamEmu Saves\
+For linux: $XDG_DATA_HOME/HalfLife SteamEmu Saves/ or if it's not defined: $HOME/.local/share/HalfLife SteamEmu Saves/) you can create a file named global_save.txt right beside steam_api(64).dll (libsteam_api.so on linux)
 This can be useful if you want to use same global settings like same account name or steam id for all games. 
 
 For game unique stuff (stats and remote storage) a folder is created with the appid of the game.
-If you want to change your steam_id on a per game basis, simply create a settings folder in the game unique directory (Full path: C:\Users\<Your windows user name>\AppData\Roaming\Goldberg SteamEmu Saves\<appid>\settings)
+If you want to change your steam_id on a per game basis, simply create a settings folder in the game unique directory (Full path: C:\Users\<Your windows user name>\AppData\Roaming\HalfLife SteamEmu Saves\<appid>\settings)
 In that settings folder create a user_steam_id.txt file that contains the valid steam id that you want to use for that game only.
 
 You can also make the emu ignore certain global settings by using a force_account_name.txt, force_language.txt, force_listen_port.txt or force_steamid.txt that you put in the <path where the emu lib is>\steam_settings\ folder.

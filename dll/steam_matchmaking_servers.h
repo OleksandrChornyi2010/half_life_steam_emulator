@@ -16,11 +16,15 @@
    License along with the half_life_steam_emulator; if not, see
    <http://www.gnu.org/licenses/>.  */
 
+#ifndef STEAM_MATCHMAKING_SERVERS_H
+#define STEAM_MATCHMAKING_SERVERS_H
+
 #include "base.h"
 #include "vdf_parser.h"
+#include <future>
 
 #define SERVER_TIMEOUT 10.0
-#define DIRECT_IP_DELAY 10.0
+#define DIRECT_IP_TIMEOUT 10.0
 
 struct Steam_Matchmaking_Servers_Direct_IP_Request {
     HServerQuery id;
@@ -51,17 +55,29 @@ struct Steam_Matchmaking_Request {
     HServerListRequest id;
     ISteamMatchmakingServerListResponse *callbacks;
     ISteamMatchmakingServerListResponse001 *old_callbacks;
-    bool completed, cancelled, finished_pushing, responded, dont_answer;
-    int i = 0;
+    bool completed, cancelled, finished_pushing, responded;
+    int pending_responses = 0;
+    int success = 0;
+    int total = 0;
+    int loss = 0;
+    int timeout = 0;
     std::vector<struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
     EMatchMakingType type{};
 };
+
 struct ServerItem {
     std::string ip;
-    int port;
-    uint32_t last_played;
+    uint16_t port;
+    uint32_t last_played = 0;
     Gameserver gameserver;
 };
+
+struct MasterServerItem {
+    std::string ip;
+    uint16_t port;
+};
+
+#include "GoldSrcQuery.h"
 
 class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
                                   public ISteamMatchmakingServers001 {
@@ -72,31 +88,36 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
     std::vector<struct Steam_Matchmaking_Servers_Gameserver> gameservers_lan;
     std::vector<struct Steam_Matchmaking_Request> requests;
     std::vector<struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
+    const int MAX_SERVERS_PER_FRAME = 1;
+    GoldSrcQuery m_goldsrc_query;
     int server_list_request = 0;
+    int current_tick = 0;
     void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
-    bool FetchServerData(std::string ip, uint16_t port, Gameserver *out_data);
-    void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type, size_t request_index, EMatchMakingType request_type);
+    void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type);
+    void GetInternetServers(HServerListRequest id, EMatchMakingType type, std::string filters);
+    std::string ParseFilters(AppId_t iApp, STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters);
     void ProcessLANServerList(HServerListRequest id, size_t request_index);
 
     void ReadInput();
 
     void DebugListServers(const Steam_Matchmaking_Request &r, const std::string &label);
-
+    void OnInternetServerInfoReceived(const Gameserver &_gs, std::string server_ip, uint16_t server_port, uint32_t last_played, EMatchMakingType type, HServerListRequest id, bool isRefreshQuery = false, int iServer = -2);
     void reactivate_request(Steam_Matchmaking_Request &r);
     void ProcessPingRequest(uint32 unIP, uint16 usPort, HServerQuery id);
     void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
-    void ProcessSingleServer(ServerItem &server, EMatchMakingType type, Steam_Matchmaking_Servers_Gameserver &g);
+    void ProcessMasterServer(HServerListRequest id, EMatchMakingType type, std::string address, int port, std::string filter);
 
   public:
     inline static std::vector<ServerItem> history_servers;
     inline static std::vector<ServerItem> favorite_servers;
     static std::string ip_to_string(uint32_t ip_host_order);
     static void ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
+    static void ParseMasterServersFile(std::vector<MasterServerItem> &vec);
     static VDFNode ConvertToNode();
 
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
 
-    HServerListRequest RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type);
+    std::pair<HServerListRequest, EMatchMakingType> RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type);
 
     // Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
     // Each call allocates a new asynchronous request object.
@@ -265,3 +286,4 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
     void Callback(Common_Message *msg);
     void server_details(Gameserver *g, gameserveritem_t *server);
 };
+#endif // STEAM_MATCHMAKING_SERVERS_H

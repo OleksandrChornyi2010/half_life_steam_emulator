@@ -252,12 +252,10 @@ class SteamCallResults {
                                     cb->Run(&(result[0]));
                                 }
                             }
-                            std::cout << "cb->Run in temp_cbs iter passed" << std::endl;
                             // COULD BE DELETED SO DON'T TOUCH CB
                             global_mutex.lock();
                             PRINT_DEBUG("callresult done\n");
                         }
-                        std::cout << "ALL cb->Run in temp_cbs iter passed" << std::endl;
                     }
 
                     if (run_call_completed_cb) {
@@ -276,9 +274,7 @@ class SteamCallResults {
                             if (cb)
                                 cb->Run(&temp);
                             // global_mutex.lock();
-                            std::cout << "cb->Run normal iter passed" << std::endl;
                         }
-                        std::cout << "ALL cb->Run normal iter passed" << std::endl;
 
                         if (cb_all) {
                             cb_all(reinterpret_cast<const char *>(&data), sizeof(data), iCallback);
@@ -287,7 +283,6 @@ class SteamCallResults {
                         if (cb_all) {
                             const char *data_ptr = result.empty() ? nullptr : result.data();
                             size_t data_size = result.size();
-                            std::cout << "Potentional crash on else branch" << std::endl;
                             cb_all(data_ptr, data_size, iCallback);
                         }
                     }

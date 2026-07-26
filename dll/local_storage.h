@@ -53,6 +53,7 @@ class Local_Storage {
     static constexpr auto platform_folder = "platform";
     static constexpr auto config_folder = "config";
     static constexpr auto historyFileName = "serverbrowser_hist.vdf";
+    static constexpr auto masterServersFileName = "MasterServers.vdf";
 
   private:
     std::string save_directory;
@@ -62,6 +63,7 @@ class Local_Storage {
     static uint32 i_appid;
     static std::string get_program_path();
     static std::string get_history_file_path();
+    static std::string get_master_servers_file_path();
     static std::string get_game_settings_path();
     static std::string get_user_appdata_path();
     static std::string data_path;

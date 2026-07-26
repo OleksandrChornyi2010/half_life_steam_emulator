@@ -20,9 +20,12 @@ You can download stable builds from the [release section](https://github.com/Ole
 
 ## Features
 
-- Emulator can now work with favorite and history servers saved locally.
-- Getting internet servers will be implemented soon.
-- Windows support will also be added.
+- Supports both Linux and Windows
+- Emulator can now work with favorite and history servers saved locally in `<steam_emulator_data_dir>`/platform/serverbrowser_hist.vdf.
+- Can get internet and spectator servers from multiple master servers written in <steam_emulator_data_dir>`/platform/MasterServers.vdf.
+
+## Setting up
+Run the game once to create serverbrowser_hist.vdf and MasterServers.vdf files. Favorites and history lists will work out of the box, but you need to add a master server ip/domain into the `<steam_emulator_data_dir>`/platform/MasterServers.vdf file. Simply replace _master server ip/domain goes here_ text with master server ip or domain. If you want to have multiple master servers, you can copy a block that starts with `"0"` (or any other number) and ends with `}` and paste in right below the block that you copied, and change the address in the block that you pasted.
 
 ## Contributions
 
@@ -45,7 +48,7 @@ add game support
 
 ## Building
 
-These are instructions for the steam_api build target. Other targets are not required for half-life.
+These are instructions for the steam_api build target. Other targets are not required.
 
 ### Preparation:
 
@@ -116,4 +119,4 @@ It doesn't break any DRM. If the game has a protection that doesn't let you use 
 
 - **[SaNNa](https://github.com/OleksandrChornyi2010)** — Modifications and maintenance for Half-Life based games.
 
-- **[Mr Goldberg](https://gitlab.com/Mr_Goldberg/goldberg_emulator)** — Huge thanks to the original author for the incredible work on the core emulator!
+- **[Mr Goldberg](https://gitlab.com/Mr_Goldberg/goldberg_emulator)** — Huge thanks to the original author for incredible work on the emulator!
