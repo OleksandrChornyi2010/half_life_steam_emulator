@@ -34,6 +34,7 @@ struct Steam_Matchmaking_Servers_Direct_IP_Request {
 
     std::chrono::high_resolution_clock::time_point created;
     ISteamMatchmakingRulesResponse *rules_response = NULL;
+    RulesServerResult rules_server_info;
 
     ISteamMatchmakingPlayersResponse *players_response = NULL;
     PlayerServerResult player_server_info;
@@ -57,10 +58,6 @@ struct Steam_Matchmaking_Request {
     ISteamMatchmakingServerListResponse001 *old_callbacks;
     bool completed, cancelled, finished_pushing, responded;
     int pending_responses = 0;
-    int success = 0;
-    int total = 0;
-    int loss = 0;
-    int timeout = 0;
     std::vector<struct Steam_Matchmaking_Servers_Gameserver> gameservers_filtered;
     EMatchMakingType type{};
 };
@@ -105,6 +102,7 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
     void reactivate_request(Steam_Matchmaking_Request &r);
     void ProcessPingRequest(uint32 unIP, uint16 usPort, HServerQuery id);
     void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
+    void ProcessRulesRequest(HServerQuery id, uint32 unIP, uint16 usPort);
     void ProcessMasterServer(HServerListRequest id, EMatchMakingType type, std::string address, int port, std::string filter);
 
   public:
@@ -237,8 +235,6 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
 
     // Refresh a single server inside of a query (rather than all the servers )
     void RefreshServer(HServerListRequest hRequest, int iServer);
-
-    void RefreshSingleServer(Steam_Matchmaking_Servers_Gameserver &gs, int iServer);
 
     // Get details on a given server in the list, you can get the valid range of index
     // values by calling GetServerCount().  You will also receive index values in

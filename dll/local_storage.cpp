@@ -35,7 +35,7 @@ struct File_Data {
     std::string name;
 };
 std::string Local_Storage::data_path;
-uint32 Local_Storage::i_appid = 0; // TODO: Set to const DEFAULT_APPID
+uint32 Local_Storage::i_appid = 0;
 
 #ifdef NO_DISK_WRITES
 std::string Local_Storage::get_program_path() {

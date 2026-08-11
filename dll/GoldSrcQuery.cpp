@@ -73,8 +73,6 @@ GoldSrcQuery::GoldSrcQuery() : is_running(false) {
 #endif
         is_running = true;
         worker_thread = std::thread(&GoldSrcQuery::AsyncWorkerLoop, this);
-    } else {
-        std::cout << "GoldSrcQuery: Failed to create async socket" << std::endl;
     }
 }
 
@@ -116,8 +114,7 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
 
     if (header == 0x6D) { // GoldSrc
         std::cout << "Protocol: GoldSrc (Obsolete)" << std::endl;
-        std::string addr = read_string(ptr, end);
-        std::cout << "Address: " << addr << std::endl;
+        read_string(ptr, end); // Skip address
         std::string name = read_string(ptr, end);
         std::cout << "Name:    " << name << std::endl;
         std::string map = read_string(ptr, end);
@@ -135,11 +132,8 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         uint8_t prot_ver = read_num<uint8_t>(ptr, end);
         std::cout << "Protocol version: " << (int)prot_ver << std::endl;
 
-        uint8_t server_type = read_num<uint8_t>(ptr, end);
-        std::cout << "Server type: " << server_type << std::endl;
-
-        uint8_t environment = read_num<uint8_t>(ptr, end);
-        std::cout << "Env: " << environment << std::endl;
+        read_num<uint8_t>(ptr, end); // Skip server type
+        read_num<uint8_t>(ptr, end); // Skip environment
 
         uint8_t visibility = read_num<uint8_t>(ptr, end);
         std::cout << "Visibility: " << (int)visibility << std::endl;
@@ -147,21 +141,14 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         uint8_t is_mod = read_num<uint8_t>(ptr, end);
         std::cout << "Is mod: " << (int)is_mod << std::endl;
 
-        if (is_mod == 1) {
-            std::string mod_link = read_string(ptr, end);
-            std::cout << "Mod link: " << mod_link << std::endl;
-            std::string mod_download = read_string(ptr, end);
-            std::cout << "mod_download: " << mod_download << std::endl;
-
+        if (is_mod == 1) { // Skip mod fields
+            read_string(ptr, end);
+            read_string(ptr, end);
             read_num<uint8_t>(ptr, end);
-            uint32_t mod_version = read_num<uint32_t>(ptr, end);
-            std::cout << "mod_version: " << mod_version << std::endl;
-            uint32_t mod_size = read_num<uint32_t>(ptr, end);
-            std::cout << "mod_size: " << mod_size << std::endl;
-            uint8_t mod_type = read_num<uint8_t>(ptr, end);
-            std::cout << "mod_type: " << mod_type << std::endl;
-            uint8_t mod_dll = read_num<uint8_t>(ptr, end);
-            std::cout << "mod_dll: " << mod_dll << std::endl;
+            read_num<uint32_t>(ptr, end);
+            read_num<uint32_t>(ptr, end);
+            read_num<uint8_t>(ptr, end);
+            read_num<uint8_t>(ptr, end);
         }
 
         uint8_t vac = read_num<uint8_t>(ptr, end);
@@ -169,6 +156,7 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
 
         uint8_t bots = read_num<uint8_t>(ptr, end);
         std::cout << "bots: " << (int)bots << std::endl;
+        std::cout << "Address: " << ip << " port: " << port << std::endl;
 
         out_data->set_server_name(name);
         out_data->set_map_name(map);
@@ -205,11 +193,9 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         uint8_t bots = read_num<uint8_t>(ptr, end);
         std::cout << "bots: " << (int)bots << std::endl;
 
-        uint8_t server_type = read_num<uint8_t>(ptr, end);
-        std::cout << "Server type: " << server_type << std::endl;
+        read_num<uint8_t>(ptr, end); // Skip server type
 
-        uint8_t environment = read_num<uint8_t>(ptr, end);
-        std::cout << "Env: " << environment << std::endl;
+        read_num<uint8_t>(ptr, end); // Skip environment
 
         uint8_t visibility = read_num<uint8_t>(ptr, end);
         std::cout << "Visibility: " << (int)visibility << std::endl;
@@ -217,8 +203,7 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         uint8_t vac = read_num<uint8_t>(ptr, end);
         std::cout << "vac: " << (int)vac << std::endl;
 
-        std::string game_ver = read_string(ptr, end);
-        std::cout << "game_ver: " << game_ver << std::endl;
+        read_string(ptr, end); // Skip game version
         std::cout << "Address: " << ip << " port: " << port << std::endl;
 
         out_data->set_server_name(name);
@@ -230,6 +215,7 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         out_data->set_password_protected(visibility);
         out_data->set_secure(vac);
         out_data->set_game_description(game);
+        out_data->set_bot_player_count(bots);
         out_data->set_appid(app_id);
     } else {
         std::cout << "Unknown header type." << std::endl;
@@ -325,67 +311,6 @@ void GoldSrcQuery::GetServersFromMasterServer(const std::string &masterDomain, i
 void GoldSrcQuery::GetServerInfo(const std::string &ip, uint16_t port, std::function<void(const Gameserver &)> on_response) {
     if (!on_response)
         return;
-
-#if 0 // Set to 0 to restore asynchronous queue behavior
-    // Synchronous temporary mode for reliability testing
-    AutoSocket sock(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
-    if (!sock.is_valid()) {
-        Gameserver failed_gs;
-        failed_gs.set_had_successful_response(false);
-        on_response(failed_gs);
-        return;
-    }
-
-    // Set receive timeout (2.5 seconds)
-    struct timeval tv;
-    tv.tv_sec = 2;
-    tv.tv_usec = 500000;
-    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char *>(&tv), sizeof(tv));
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
-
-    std::vector<uint8_t> info_req = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
-
-    auto start_time = std::chrono::steady_clock::now();
-    sendto(sock, reinterpret_cast<const char *>(info_req.data()), info_req.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
-
-    uint8_t buffer[2048];
-    ssize_t received = recvfrom(sock, reinterpret_cast<char *>(buffer), sizeof(buffer), 0, nullptr, nullptr);
-
-    // Handle A2S_INFO challenge protocol (0x41) if the server requests it
-    if (received > 5 && buffer[4] == 0x41) {
-        std::vector<uint8_t> chal_req = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
-        for (int i = 0; i < 4; i++) {
-            chal_req.push_back(buffer[5 + i]);
-        }
-        sendto(sock, reinterpret_cast<const char *>(chal_req.data()), chal_req.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
-        received = recvfrom(sock, reinterpret_cast<char *>(buffer), sizeof(buffer), 0, nullptr, nullptr);
-    }
-
-    auto end_time = std::chrono::steady_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
-
-    // Verify response header (Source 0x49 or GoldSrc 0x6D)
-    if (received > 4 && (buffer[4] == 0x49 || buffer[4] == 0x6D)) {
-        Gameserver gs;
-        parse_info_buffer(buffer, received, &gs, ip, port);
-        gs.set_latency(static_cast<uint32_t>(duration));
-        gs.set_had_successful_response(true);
-        gs.set_ip(ntohl(addr.sin_addr.s_addr));
-        gs.set_port(port);
-        gs.set_query_port(port);
-
-        on_response(gs);
-    } else {
-        Gameserver failed_gs;
-        failed_gs.set_had_successful_response(false);
-        on_response(failed_gs);
-    }
-#else
     if (m_async_sock < 0 || !is_running)
         return;
 
@@ -395,7 +320,6 @@ void GoldSrcQuery::GetServerInfo(const std::string &ip, uint16_t port, std::func
 
     std::lock_guard<std::mutex> lock(queue_mutex);
     request_queue.push_back({ip_net, port_net, on_response});
-#endif
 }
 
 void GoldSrcQuery::AsyncWorkerLoop() {
@@ -487,7 +411,6 @@ void GoldSrcQuery::AsyncWorkerLoop() {
                     sendto(m_async_sock, reinterpret_cast<const char *>(chal_req.data()), chal_req.size(), 0, (struct sockaddr *)&from, sizeof(from));
                     it->second.start = std::chrono::steady_clock::now();
                 } else if (header == 0x49 || header == 0x6D) {
-                    // std::cout << "PENDING_SIZE: " << pending.size() << std::endl;
                     auto now = std::chrono::steady_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second.start).count();
 
@@ -531,26 +454,76 @@ ssize_t GoldSrcQuery::query_with_challenge_sync(int sock, const sockaddr_in &add
     std::vector<uint8_t> req = {0xFF, 0xFF, 0xFF, 0xFF, type, 0xFF, 0xFF, 0xFF, 0xFF};
     sendto(sock, reinterpret_cast<const char *>(req.data()), req.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
 
-    ssize_t res = recvfrom(sock, reinterpret_cast<char *>(buffer), size, 0, nullptr, nullptr);
+    std::vector<std::vector<uint8_t>> fragments(16);
+    int total_packets = 1;
+    int received_packets = 0;
+    bool is_split = false;
 
-    if (res > 5 && buffer[4] == 0x41) {
-        req.clear();
-        req.insert(req.end(), {0xFF, 0xFF, 0xFF, 0xFF, type});
-        for (int i = 0; i < 4; i++)
-            req.push_back(buffer[5 + i]);
+    while (received_packets < total_packets) {
+        uint8_t temp_buf[4096];
+        ssize_t res = recvfrom(sock, reinterpret_cast<char *>(temp_buf), sizeof(temp_buf), 0, nullptr, nullptr);
 
-        sendto(sock, reinterpret_cast<const char *>(req.data()), req.size(), 0,
-               (struct sockaddr *)&addr, sizeof(addr));
-        res = recvfrom(sock, reinterpret_cast<char *>(buffer), size, 0, nullptr,
-                       nullptr);
+        if (res < 0) {
+            return -1;
+        }
+
+        if (res >= 4) {
+            int32_t header;
+            memcpy(&header, temp_buf, 4);
+
+            if (header == -1) {
+                if (res > 4 && temp_buf[4] == 0x41) {
+                    req.clear();
+                    req.insert(req.end(), {0xFF, 0xFF, 0xFF, 0xFF, type});
+                    for (int i = 0; i < 4; i++) {
+                        req.push_back(temp_buf[5 + i]);
+                    }
+
+                    sendto(sock, reinterpret_cast<const char *>(req.data()), req.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
+
+                    fragments.assign(16, std::vector<uint8_t>());
+                    total_packets = 1;
+                    received_packets = 0;
+                    is_split = false;
+                } else if (!is_split) {
+                    memcpy(buffer, temp_buf, std::min(static_cast<size_t>(res), size));
+                    return res;
+                }
+            } else if (header == -2) {
+                if (res < 9)
+                    continue;
+                is_split = true;
+
+                uint8_t packet_info = temp_buf[8];
+                int index = (packet_info >> 4) & 0x0F;
+                int total = packet_info & 0x0F;
+
+                if (total > 0 && total <= 16 && index < total) {
+                    total_packets = total;
+                    if (fragments[index].empty()) {
+                        fragments[index].assign(temp_buf + 9, temp_buf + res);
+                        received_packets++;
+                    }
+                }
+            }
+        }
     }
-    return res;
+
+    if (is_split && received_packets == total_packets) {
+        size_t offset = 0;
+        for (int i = 0; i < total_packets; i++) {
+            if (offset + fragments[i].size() <= size) {
+                memcpy(buffer + offset, fragments[i].data(), fragments[i].size());
+                offset += fragments[i].size();
+            }
+        }
+        return offset;
+    }
+
+    return -1;
 }
 
-void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, PlayerServerResult *result) {
-    if (!result)
-        return;
-
+void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, PlayerServerResult &result) {
     AutoSocket sock(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
     if (!sock.is_valid())
         return;
@@ -592,15 +565,15 @@ void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, Player
         int32_t score = read_num<int32_t>(ptr, end);
         float time = read_num<float>(ptr, end);
 
-        result->players.push_back({name, score, time});
+        result.players.push_back({name, score, time});
         std::cout << std::setw(2) << i << ". " << std::setw(20)
                   << (name.empty() ? "-" : name) << " | Frags: " << std::setw(3)
                   << score << " | Time: " << (int)time << "s" << std::endl;
     }
-    result->finished = true;
+    result.finished = true;
 }
 
-void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port) {
+void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port, RulesServerResult &result) {
     AutoSocket sock(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
     if (!sock.is_valid())
         return;
@@ -622,8 +595,7 @@ void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port) {
     inet_pton(AF_INET, ip.c_str(), &addr.sin_addr);
 
     uint8_t buffer[16384];
-    ssize_t res =
-        query_with_challenge_sync(sock, addr, 0x56, buffer, sizeof(buffer));
+    ssize_t res = query_with_challenge_sync(sock, addr, 0x56, buffer, sizeof(buffer));
 
     if (res <= 5 || buffer[4] != 0x45)
         return;
@@ -636,6 +608,8 @@ void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port) {
     for (int i = 0; i < count; i++) {
         std::string k = read_string(ptr, end);
         std::string v = read_string(ptr, end);
-        std::cout << std::setw(20) << k << " = " << v << std::endl;
+        std::cout << k << " = " << v << std::endl;
+        result.rules.push_back(std::make_pair(k, v));
     }
+    result.finished = true;
 }

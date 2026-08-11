@@ -354,6 +354,10 @@ struct PlayerServerResult {
     std::vector<PlayerServerData> players;
     bool finished = false;
 };
+struct RulesServerResult {
+    std::vector<std::pair<std::string, std::string>> rules;
+    bool finished = false;
+};
 
 //-----------------------------------------------------------------------------
 // Purpose: Callback interface for receiving responses after requesting rules

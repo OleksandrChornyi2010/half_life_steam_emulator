@@ -90,8 +90,8 @@ class GoldSrcQuery {
 
     void GetServerInfo(const std::string &ip, uint16_t port, std::function<void(const Gameserver &)> on_response);
 
-    void GetServerPlayers(const std::string &ip, uint16_t port, PlayerServerResult *result);
-    void GetServerRules(const std::string &ip, uint16_t port);
+    void GetServerPlayers(const std::string &ip, uint16_t port, PlayerServerResult &result);
+    void GetServerRules(const std::string &ip, uint16_t port, RulesServerResult &result);
 
   private:
     const time_t LOOP_INTERVAL_SECONDS = 0;
