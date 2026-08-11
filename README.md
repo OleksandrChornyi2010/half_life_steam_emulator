@@ -1,6 +1,6 @@
 # half_file_steam_emulator
 
-This is a fork of [Goldberg steam emulator](https://gitlab.com/Mr_Goldberg/goldberg_emulator/) with the aim to make half-life based games server browser work like the original one. Currently it works only on Linux, but I plan to add windows support soon. For a readme on how to use it see: [The Release Readme](Readme_release.txt)
+This is a fork of [Goldberg steam emulator](https://gitlab.com/Mr_Goldberg/goldberg_emulator/) with the aim to make half-life based games' server browser work like the original one. For a readme on how to use it see: [The Release Readme](Readme_release.txt)
 
 ## How to use
 
@@ -25,7 +25,8 @@ You can download stable builds from the [release section](https://github.com/Ole
 - Can get internet and spectator servers from multiple master servers written in <steam_emulator_data_dir>`/platform/MasterServers.vdf.
 
 ## Setting up
-Run the game once to create serverbrowser_hist.vdf and MasterServers.vdf files. Favorites and history lists will work out of the box, but you need to add a master server ip/domain into the `<steam_emulator_data_dir>`/platform/MasterServers.vdf file. Simply replace _master server ip/domain goes here_ text with master server ip or domain. If you want to have multiple master servers, you can copy a block that starts with `"0"` (or any other number) and ends with `}` and paste in right below the block that you copied, and change the address in the block that you pasted.
+
+Run the game once to create serverbrowser*hist.vdf and MasterServers.vdf files. Favorites and history lists will work out of the box, but you need to add a master server ip/domain into the `<steam_emulator_data_dir>`/platform/MasterServers.vdf file. Simply replace \_master server ip/domain goes here* text with master server ip or domain. If you want to have multiple master servers, you can copy a block that starts with `"0"` (or any other number) and ends with `}` and paste in right below the block that you copied, and change the address in the block that you pasted.
 
 ## Contributions
 
