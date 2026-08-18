@@ -22,6 +22,7 @@
 
 struct ServerItem;
 struct PlayerServerResult;
+struct RulesServerResult;
 class Gameserver;
 
 class CallbackWorker {

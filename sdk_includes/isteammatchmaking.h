@@ -344,21 +344,6 @@ class ISteamMatchmakingPlayersResponse {
     virtual void PlayersRefreshComplete() = 0;
 };
 
-struct PlayerServerData {
-    std::string name;
-    int score;
-    float time;
-};
-
-struct PlayerServerResult {
-    std::vector<PlayerServerData> players;
-    bool finished = false;
-};
-struct RulesServerResult {
-    std::vector<std::pair<std::string, std::string>> rules;
-    bool finished = false;
-};
-
 //-----------------------------------------------------------------------------
 // Purpose: Callback interface for receiving responses after requesting rules
 // details on a particular server.

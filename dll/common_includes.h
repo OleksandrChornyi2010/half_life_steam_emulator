@@ -58,8 +58,10 @@
 #include <shlobj.h>
 #include <windows.h>
 #include <ws2tcpip.h>
-#include <BaseTsd.h>
+#include <basetsd.h>
+#ifndef __MINGW32__
 typedef SSIZE_T ssize_t;
+#endif
 typedef long suseconds_t;
 
 #define MSG_NOSIGNAL 0

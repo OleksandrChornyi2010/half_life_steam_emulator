@@ -149,10 +149,16 @@ class CCallbackBase {
         m_iCallback = 0;
     }
     // don't add a virtual destructor because we export this binary interface across dll's
-    virtual void S_API_THISCALL Run(void *pvParam) = 0;
-    virtual void S_API_THISCALL Run(void *pvParam, bool bIOFailure, SteamAPICall_t hSteamAPICall) = 0;
+
+#ifdef __MINGW32__ // fix MSVC vtable ordering quirk
+    virtual void Run(void *pvParam, bool bIOFailure, SteamAPICall_t hSteamAPICall) = 0;
+    virtual void Run(void *pvParam) = 0;
+#else
+    virtual void Run(void *pvParam) = 0;
+    virtual void Run(void *pvParam, bool bIOFailure, SteamAPICall_t hSteamAPICall) = 0;
+#endif
     int GetICallback() { return m_iCallback; }
-    virtual int S_API_THISCALL GetCallbackSizeBytes() = 0;
+    virtual int GetCallbackSizeBytes() = 0;
 
   protected:
     enum { k_ECallbackFlagsRegistered = 0x01,
@@ -164,6 +170,12 @@ class CCallbackBase {
   private:
     CCallbackBase(const CCallbackBase &);
     CCallbackBase &operator=(const CCallbackBase &);
+};
+
+// SDK versions 1.00, 1.01, 1.02 have a vtable without the 3 arg Run method
+class CCallbackBase_Old {
+  public:
+    virtual void Run(void *pvParam) = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -180,9 +192,9 @@ class CCallbackImpl : protected CCallbackBase {
 
   protected:
     friend class CCallbackMgr;
-    virtual void S_API_THISCALL Run(void *pvParam) = 0;
-    virtual void S_API_THISCALL Run(void *pvParam, bool /*bIOFailure*/, SteamAPICall_t /*hSteamAPICall*/) { Run(pvParam); }
-    virtual int S_API_THISCALL GetCallbackSizeBytes() { return sizeof_P; }
+    virtual void Run(void *pvParam) = 0;
+    virtual void Run(void *pvParam, bool /*bIOFailure*/, SteamAPICall_t /*hSteamAPICall*/) { Run(pvParam); }
+    virtual int GetCallbackSizeBytes() { return sizeof_P; }
 };
 
 //-----------------------------------------------------------------------------
@@ -192,7 +204,7 @@ class CCallbackImpl : protected CCallbackBase {
 template <class T, class P>
 class CCallResult : private CCallbackBase {
   public:
-    typedef void (S_API_THISCALL T::*func_t)(P *, bool);
+    typedef void (T::*func_t)(P *, bool);
 
     CCallResult();
     ~CCallResult();
@@ -204,9 +216,9 @@ class CCallResult : private CCallbackBase {
     void SetGameserverFlag() { m_nCallbackFlags |= k_ECallbackFlagsGameServer; }
 
   private:
-    virtual void S_API_THISCALL Run(void *pvParam);
-    virtual void S_API_THISCALL Run(void *pvParam, bool bIOFailure, SteamAPICall_t hSteamAPICall);
-    virtual int S_API_THISCALL GetCallbackSizeBytes() { return sizeof(P); }
+    virtual void Run(void *pvParam);
+    virtual void Run(void *pvParam, bool bIOFailure, SteamAPICall_t hSteamAPICall);
+    virtual int GetCallbackSizeBytes() { return sizeof(P); }
 
     SteamAPICall_t m_hAPICall;
     T *m_pObj;
@@ -221,7 +233,7 @@ class CCallResult : private CCallbackBase {
 template <class T, class P, bool bGameserver = false>
 class CCallback : public CCallbackImpl<sizeof(P)> {
   public:
-    typedef void (S_API_THISCALL T::*func_t)(P *);
+    typedef void (T::*func_t)(P *);
 
     // NOTE: If you can't provide the correct parameters at construction time, you should
     // use the CCallbackManual callback object (STEAM_CALLBACK_MANUAL macro) instead.
@@ -231,7 +243,7 @@ class CCallback : public CCallbackImpl<sizeof(P)> {
     void Unregister();
 
   protected:
-    virtual void S_API_THISCALL Run(void *pvParam);
+    virtual void Run(void *pvParam);
 
     T *m_pObj;
     func_t m_Func;

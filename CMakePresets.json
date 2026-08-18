@@ -72,7 +72,11 @@
             "inherits": "base-windows",
             "architecture": "Win32",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug"
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_PREFIX_PATH": "C:/Libraries/protobuf-32-debug",
+                "Protobuf_INCLUDE_DIR": "C:/Libraries/protobuf-32-debug/include",
+                "Protobuf_LIBRARY": "C:/Libraries/protobuf-32-debug/lib/libprotobufd.lib",
+                "Protobuf_PROTOC_EXECUTABLE": "C:/Libraries/protobuf-32-debug/bin/protoc.exe"
             }
         },
         {

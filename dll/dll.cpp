@@ -19,31 +19,6 @@
 #define STEAM_API_FUNCTIONS_IMPL
 #include "dll.h"
 
-static char old_client[128] = "SteamClient017";
-static char old_gameserver[128] = "SteamGameServer012";
-static char old_gameserver_stats[128] = "SteamGameServerStats001";
-static char old_user[128] = "SteamUser018";
-static char old_friends[128] = "SteamFriends015";
-static char old_utils[128] = "SteamUtils007";
-static char old_matchmaking[128] = "SteamMatchMaking009";
-static char old_matchmaking_servers[128] = "SteamMatchMakingServers002";
-static char old_userstats[128] = "STEAMUSERSTATS_INTERFACE_VERSION011";
-static char old_apps[128] = "STEAMAPPS_INTERFACE_VERSION007";
-static char old_networking[128] = "SteamNetworking005";
-static char old_remote_storage_interface[128] = "STEAMREMOTESTORAGE_INTERFACE_VERSION013";
-static char old_screenshots[128] = "STEAMSCREENSHOTS_INTERFACE_VERSION002";
-static char old_http[128] = "STEAMHTTP_INTERFACE_VERSION002";
-static char old_unified_messages[128] = "STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001";
-static char old_controller[128] = "SteamController003";
-static char old_ugc_interface[128] = "STEAMUGC_INTERFACE_VERSION007";
-static char old_applist[128] = "STEAMAPPLIST_INTERFACE_VERSION001";
-static char old_music[128] = "STEAMMUSIC_INTERFACE_VERSION001";
-static char old_music_remote[128] = "STEAMMUSICREMOTE_INTERFACE_VERSION001";
-static char old_html_surface[128] = "STEAMHTMLSURFACE_INTERFACE_VERSION_003";
-static char old_inventory[128] = "STEAMINVENTORY_INTERFACE_V001";
-static char old_video[128] = "STEAMVIDEO_INTERFACE_V001";
-static char old_masterserver_updater[128] = "SteamMasterServerUpdater001";
-
 static bool try_load_steam_interfaces(std::string interfaces_path) {
     std::filesystem::path path_to_file(utf8_decode(interfaces_path));
     std::ifstream input(path_to_file);

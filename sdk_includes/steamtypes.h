@@ -19,22 +19,6 @@ typedef unsigned steam_bool;
 
 #define S_CALLTYPE __cdecl
 
-#if defined(_WIN32)
-#if defined(__GNUC__)
-// GCC / MinGW syntax
-#define S_API_THISCALL __attribute__((thiscall))
-#elif defined(_MSC_VER)
-// Microsoft Visual Studio syntax
-#define S_API_THISCALL __thiscall
-#else
-// Fallback for other Windows compilers
-#define S_API_THISCALL
-#endif
-#else
-// Linux / macOS standard Itanium ABI
-#define S_API_THISCALL
-#endif
-
 // Steam-specific types. Defined here so this header file can be included in other code bases.
 #ifndef WCHARTYPES_H
 typedef unsigned char uint8;

@@ -26,6 +26,21 @@
 #define SERVER_TIMEOUT 10.0
 #define DIRECT_IP_TIMEOUT 10.0
 
+struct PlayerServerData {
+    std::string name;
+    int score;
+    float time;
+};
+
+struct PlayerServerResult {
+    std::vector<PlayerServerData> players;
+    bool finished = false;
+};
+struct RulesServerResult {
+    std::vector<std::pair<std::string, std::string>> rules;
+    bool finished = false;
+};
+
 struct Steam_Matchmaking_Servers_Direct_IP_Request {
     HServerQuery id;
     uint32 ip;
@@ -85,13 +100,15 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
     std::vector<struct Steam_Matchmaking_Servers_Gameserver> gameservers_lan;
     std::vector<struct Steam_Matchmaking_Request> requests;
     std::vector<struct Steam_Matchmaking_Servers_Direct_IP_Request> direct_ip_requests;
-    const int MAX_SERVERS_PER_FRAME = 1;
+    std::vector<MasterServerItem> master_servers;
+    gameserveritem_t m_server_info;
     GoldSrcQuery m_goldsrc_query;
     int server_list_request = 0;
     int current_tick = 0;
-    void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type);
+    void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type, std::string filters = "");
     void RefreshServersFromFile(HServerListRequest id, EMatchMakingType type);
     void GetInternetServers(HServerListRequest id, EMatchMakingType type, std::string filters);
+    void switchServers(HServerListRequest id, EMatchMakingType type, std::string filters);
     std::string ParseFilters(AppId_t iApp, STEAM_ARRAY_COUNT(nFilters) MatchMakingKeyValuePair_t **ppchFilters, uint32 nFilters);
     void ProcessLANServerList(HServerListRequest id, size_t request_index);
 
@@ -115,7 +132,7 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
 
     Steam_Matchmaking_Servers(class Settings *settings, class Networking *network);
 
-    std::pair<HServerListRequest, EMatchMakingType> RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, EMatchMakingType type);
+    HServerListRequest RequestServerList(AppId_t iApp, ISteamMatchmakingServerListResponse *pRequestServersResponse, ISteamMatchmakingServerListResponse001 *pOldRequestServersResponse, EMatchMakingType type, std::string filters = "");
 
     // Request a new list of servers of a particular type.  These calls each correspond to one of the EMatchMakingType values.
     // Each call allocates a new asynchronous request object.

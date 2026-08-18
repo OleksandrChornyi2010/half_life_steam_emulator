@@ -21,6 +21,31 @@
 
 #include "common_includes.h"
 
+inline char old_client[128] = "SteamClient017";
+inline char old_gameserver[128] = "SteamGameServer012";
+inline char old_gameserver_stats[128] = "SteamGameServerStats001";
+inline char old_user[128] = "SteamUser018";
+inline char old_friends[128] = "SteamFriends015";
+inline char old_utils[128] = "SteamUtils007";
+inline char old_matchmaking[128] = "SteamMatchMaking009";
+inline char old_matchmaking_servers[128] = "SteamMatchMakingServers002";
+inline char old_userstats[128] = "STEAMUSERSTATS_INTERFACE_VERSION011";
+inline char old_apps[128] = "STEAMAPPS_INTERFACE_VERSION007";
+inline char old_networking[128] = "SteamNetworking005";
+inline char old_remote_storage_interface[128] = "STEAMREMOTESTORAGE_INTERFACE_VERSION013";
+inline char old_screenshots[128] = "STEAMSCREENSHOTS_INTERFACE_VERSION002";
+inline char old_http[128] = "STEAMHTTP_INTERFACE_VERSION002";
+inline char old_unified_messages[128] = "STEAMUNIFIEDMESSAGES_INTERFACE_VERSION001";
+inline char old_controller[128] = "SteamController003";
+inline char old_ugc_interface[128] = "STEAMUGC_INTERFACE_VERSION007";
+inline char old_applist[128] = "STEAMAPPLIST_INTERFACE_VERSION001";
+inline char old_music[128] = "STEAMMUSIC_INTERFACE_VERSION001";
+inline char old_music_remote[128] = "STEAMMUSICREMOTE_INTERFACE_VERSION001";
+inline char old_html_surface[128] = "STEAMHTMLSURFACE_INTERFACE_VERSION_003";
+inline char old_inventory[128] = "STEAMINVENTORY_INTERFACE_V001";
+inline char old_video[128] = "STEAMVIDEO_INTERFACE_V001";
+inline char old_masterserver_updater[128] = "SteamMasterServerUpdater001";
+
 #define PUSH_BACK_IF_NOT_IN(vector, element)                                  \
     {                                                                         \
         if (std::find(vector.begin(), vector.end(), element) == vector.end()) \
@@ -109,6 +134,22 @@ bool file_exists_(std::string full_path);
 unsigned int file_size_(std::string full_path);
 
 #define DEFAULT_CB_TIMEOUT 0.002
+
+inline void Run_Callback_One_Arg(class CCallbackBase *cb, void *pvParam) {
+    if (strcmp(old_matchmaking, "SteamMatchMaking002") == 0 || strcmp(old_matchmaking_servers, "SteamMatchMakingServers004") == 0) {
+        ((CCallbackBase_Old *)cb)->Run(pvParam);
+    } else {
+        ((CCallbackBase *)cb)->Run(pvParam);
+    }
+}
+
+inline void Run_Callback_Three_Args(class CCallbackBase *cb, void *pvParam, bool bIOFailure, SteamAPICall_t hSteamAPICall) {
+    if (strcmp(old_matchmaking, "SteamMatchMaking002") == 0 || strcmp(old_matchmaking_servers, "SteamMatchMakingServers004") == 0) {
+        ((CCallbackBase_Old *)cb)->Run(pvParam);
+    } else {
+        ((CCallbackBase *)cb)->Run(pvParam, bIOFailure, hSteamAPICall);
+    }
+}
 
 class SteamCallResults {
     std::vector<struct Steam_Call_Result> callresults;
@@ -247,9 +288,9 @@ class SteamCallResults {
                             // TODO: unlock relock doesn't work if mutex was locked more than once.
                             if (cb && !result.empty()) {
                                 if (run_call_completed_cb) { // run the right function depending on if it's a callback or a call result.
-                                    cb->Run(&(result[0]), false, api_call);
+                                    Run_Callback_Three_Args(cb, &(result[0]), false, api_call);
                                 } else {
-                                    cb->Run(&(result[0]));
+                                    Run_Callback_One_Arg(cb, &(result[0]));
                                 }
                             }
                             // COULD BE DELETED SO DON'T TOUCH CB
@@ -272,7 +313,7 @@ class SteamCallResults {
                             SteamAPICallCompleted_t temp = data;
                             // global_mutex.unlock(); TODO: Temporary
                             if (cb)
-                                cb->Run(&temp);
+                                Run_Callback_One_Arg(cb, &temp);
                             // global_mutex.lock();
                         }
 

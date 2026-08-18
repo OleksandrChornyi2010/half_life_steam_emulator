@@ -61,7 +61,7 @@ Notice that you need 32-bit protobuf built as a static library so the resulting 
 
 ##### Preparation:
 
-Protobuf and protoc built into _/opt/protobuf-32_ are required.
+Protobuf and protoc built into _/opt/protobuf-32_ are required. You can use `build_protobuf.sh` script to build protobuf and protoc. Launch with **sudo**.
 
 ##### Building:
 
@@ -74,13 +74,13 @@ cmake --build --preset linux-x86-release -j$(nproc)
 
 #### Building .dll:
 
-You can use Linux cross platform compiler MinGW for the windows build. DLL built this way may crash because of CRT mismatch.
+You can use Linux cross platform compiler MinGW for the windows build.
 
 ##### Preparation:
 
 32 bit version of MinGW Compiler is required.
 
-Protobuf built into _/opt/protobuf-mingw32_ **using MinGW**, and protoc built into _/opt/protobuf-32_ **using any linux compiler** are required.
+Protobuf built into _/opt/protobuf-mingw32_ **using MinGW**, and protoc built into _/opt/protobuf-32_ **using any linux compiler** are required. You can use `build_protobuf.sh` script to build protobuf and protoc. Launch with **sudo**.
 
 ##### Building:
 
@@ -95,7 +95,7 @@ cmake --build --preset mingw-win-x86-release -j$(nproc)
 
 #### Preparation
 
-Protobuf and protoc built into _C:\\Libraries\\protobuf-32_ are required.
+Protobuf and protoc built into _C:\\Libraries\\protobuf-32_ are required. You can use `build_protobuf.ps1` script to build protobuf and protoc. Launch with **administrator privileges**
 
 ##### Building .dll:
 

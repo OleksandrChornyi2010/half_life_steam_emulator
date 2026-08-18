@@ -97,6 +97,20 @@ class Steam_Matchmaking : public ISteamMatchmaking002,
 
     void send_lobby_data();
 
+    template <typename T>
+    void send_favorites_list_changed(AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags, bool bAdd) {
+        T callbackData{};
+        callbackData.m_nIP = nIP;
+        callbackData.m_nQueryPort = nQueryPort;
+        callbackData.m_nConnPort = nConnPort;
+        callbackData.m_nAppID = nAppID;
+        callbackData.m_nFlags = unFlags;
+        callbackData.m_bAdd = bAdd;
+        int id = FavoritesListChanged_t::k_iCallback;
+
+        this->callbacks->addCBResult(id, &callbackData, sizeof(callbackData));
+    }
+
     void trigger_lobby_dataupdate(CSteamID lobby, CSteamID member, bool success, double cb_timeout = 0.005, bool send_changed_lobby = true);
 
     void trigger_lobby_member_join_leave(CSteamID lobby, CSteamID member, bool leaving, bool success, double cb_timeout = 0.0);

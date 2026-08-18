@@ -273,6 +273,7 @@ int Steam_Matchmaking::GetFavoriteGameCount() {
 // *pRTime32LastPlayedOnServer is filled in the with the Unix time the favorite was added
 bool Steam_Matchmaking::GetFavoriteGame(int iGame, AppId_t *pnAppID, uint32 *pnIP, uint16 *pnConnPort, uint16 *pnQueryPort, uint32 *punFlags, uint32 *pRTime32LastPlayedOnServer) {
     PRINT_DEBUG("GetFavoriteGame\n");
+    std::cout << "GetFavoriteGame" << std::endl;
     if (!punFlags || *punFlags == k_unFavoriteFlagNone)
         return false;
     auto &servers = *punFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
@@ -301,6 +302,7 @@ bool Steam_Matchmaking::GetFavoriteGame(int iGame, AppId_t *pnAppID, uint32 *pnI
 // adds the game server to the local list; updates the time played of the server if it already exists in the list
 int Steam_Matchmaking::AddFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) {
     PRINT_DEBUG("AddFavoriteGame %lu %lu %hu %hu %lu %lu\n", nAppID, nIP, nConnPort, nQueryPort, unFlags, rTime32LastPlayedOnServer);
+    std::cout << "AddFavoriteGame, interface ver: " << old_matchmaking << std::endl;
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     if (unFlags == k_unFavoriteFlagNone)
         return false;
@@ -334,16 +336,11 @@ int Steam_Matchmaking::AddFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nConnP
     }
     VDFNode node = Steam_Matchmaking_Servers::ConvertToNode();
     VDFParser::write(path, node);
-    FavoritesListChanged_t callbackData;
-    callbackData.m_nIP = nIP;
-    callbackData.m_nQueryPort = nQueryPort;
-    callbackData.m_nConnPort = nConnPort;
-    callbackData.m_nAppID = nAppID;
-    callbackData.m_nFlags = unFlags;
-    callbackData.m_bAdd = true;
-    int id = FavoritesListChanged_t::k_iCallback;
-
-    this->callbacks->addCBResult(id, &callbackData, sizeof(callbackData));
+    if (strcmp(old_matchmaking, "SteamMatchMaking009") == 0) {
+        send_favorites_list_changed<FavoritesListChanged_t>(nAppID, nIP, nConnPort, nQueryPort, unFlags, true);
+    } else {
+        send_favorites_list_changed<OldFavoritesListChanged_t>(nAppID, nIP, nConnPort, nQueryPort, unFlags, true);
+    }
 
     return index;
 }
@@ -367,16 +364,11 @@ bool Steam_Matchmaking::RemoveFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nC
             it = servers.erase(it);
             VDFNode node = Steam_Matchmaking_Servers::ConvertToNode();
             VDFParser::write(path, node);
-            FavoritesListChanged_t callbackData;
-            callbackData.m_nIP = nIP;
-            callbackData.m_nQueryPort = nQueryPort;
-            callbackData.m_nConnPort = nConnPort;
-            callbackData.m_nAppID = nAppID;
-            callbackData.m_nFlags = unFlags;
-            callbackData.m_bAdd = false;
-            int id = FavoritesListChanged_t::k_iCallback;
-
-            this->callbacks->addCBResult(id, &callbackData, sizeof(callbackData));
+            if (strcmp(old_matchmaking, "SteamMatchMaking009") == 0) {
+                send_favorites_list_changed<FavoritesListChanged_t>(nAppID, nIP, nConnPort, nQueryPort, unFlags, false);
+            } else {
+                send_favorites_list_changed<OldFavoritesListChanged_t>(nAppID, nIP, nConnPort, nQueryPort, unFlags, false);
+            }
 
             return true;
         }
