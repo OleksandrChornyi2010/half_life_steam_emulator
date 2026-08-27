@@ -807,7 +807,6 @@ static void cb_add_queue_server(const char *data, size_t size, int callback) {
     cb.cb_id = callback;
     if (data != nullptr && size > 0) {
         cb.result.assign(data, data + size);
-        std::cout << "Queue_Server result assigned" << std::endl;
     }
     server_cb.push(cb);
 }
@@ -817,7 +816,6 @@ static void cb_add_queue_client(const char *data, size_t size, int callback) {
     cb.cb_id = callback;
     if (data != nullptr && size > 0) {
         cb.result.assign(data, data + size);
-        std::cout << "Queue_client result assigned" << std::endl;
     }
     client_cb.push(cb);
 }

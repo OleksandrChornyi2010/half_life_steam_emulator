@@ -1,5 +1,5 @@
 # Based on: https://github.com/ttroy50/cmake-examples/blob/master/03-code-generation/protobuf/CMakeLists.txt
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.10)
 
 # Set the project name
 project(half_life_steam_emulator)
@@ -195,12 +195,12 @@ target_compile_definitions(${LIB_STEAM_API}
 if(WIN32)
   install(TARGETS
     ${LIB_STEAM_API}
-    RUNTIME DESTINATION ./
+    RUNTIME DESTINATION .
   )
 else()
 	install(TARGETS
     ${LIB_STEAM_API}
-    LIBRARY DESTINATION ./
+    LIBRARY DESTINATION .
   )
 endif()
 
@@ -228,12 +228,12 @@ target_compile_definitions(${LIB_STEAMCLIENT}
 if(WIN32)
   install(TARGETS
     ${LIB_STEAMCLIENT}
-    RUNTIME DESTINATION ./
+    RUNTIME DESTINATION .
   )
 else()
 	install(TARGETS
     ${LIB_STEAMCLIENT}
-    LIBRARY DESTINATION ./
+    LIBRARY DESTINATION .
   )
 endif()
 
@@ -266,12 +266,12 @@ target_compile_definitions(${LIB_STEAMNETWORKINGSOCKETS}
 if(WIN32)
   install(TARGETS
     ${LIB_STEAMNETWORKINGSOCKETS}
-    RUNTIME DESTINATION ./
+    RUNTIME DESTINATION .
   )
 else()
 	install(TARGETS
     ${LIB_STEAMNETWORKINGSOCKETS}
-    LIBRARY DESTINATION ./
+    LIBRARY DESTINATION .
   )
 endif()
 
@@ -325,7 +325,7 @@ target_compile_definitions(${BIN_LOBBY_CONNECT}
 # Setup install rules for the target
 install(TARGETS
   ${BIN_LOBBY_CONNECT}
-  RUNTIME DESTINATION lobby_connect/
+  RUNTIME DESTINATION lobby_connect
 )
 
 ###########################################################################
@@ -346,7 +346,7 @@ target_link_libraries(${BIN_GENERATE_INTERFACES_FILE}
 # Setup install rules for the target
 install(TARGETS
   ${BIN_GENERATE_INTERFACES_FILE}
-  RUNTIME DESTINATION tools/
+  RUNTIME DESTINATION tools
 )
 
 ###########################################################################
@@ -355,14 +355,14 @@ install(TARGETS
 
 install(FILES 
   Readme_lobby_connect.txt
-  DESTINATION lobby_connect/
+  DESTINATION lobby_connect
 )
 
 install(FILES 
   scripts/find_interfaces.sh
   scripts/find_interfaces.ps1
   Readme_generate_interfaces.txt
-  DESTINATION tools/
+  DESTINATION tools
 )
 
 install(FILES 
@@ -371,10 +371,10 @@ install(FILES
   files_example/steam_interfaces.EXAMPLE.txt
   $<$<BOOL:${EMU_EXPERIMENTAL_BUILD}>:${PROJECT_SOURCE_DIR}/Readme_experimental.txt>
   $<$<CONFIG:Debug>:${PROJECT_SOURCE_DIR}/Readme_debug.txt>
-  DESTINATION ./
+  DESTINATION .
 )
 
 install(DIRECTORY 
   files_example/steam_settings.EXAMPLE
-  DESTINATION ./
+  DESTINATION .
 )

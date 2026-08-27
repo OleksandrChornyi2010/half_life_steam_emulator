@@ -273,7 +273,6 @@ int Steam_Matchmaking::GetFavoriteGameCount() {
 // *pRTime32LastPlayedOnServer is filled in the with the Unix time the favorite was added
 bool Steam_Matchmaking::GetFavoriteGame(int iGame, AppId_t *pnAppID, uint32 *pnIP, uint16 *pnConnPort, uint16 *pnQueryPort, uint32 *punFlags, uint32 *pRTime32LastPlayedOnServer) {
     PRINT_DEBUG("GetFavoriteGame\n");
-    std::cout << "GetFavoriteGame" << std::endl;
     if (!punFlags || *punFlags == k_unFavoriteFlagNone)
         return false;
     auto &servers = *punFlags == k_unFavoriteFlagHistory ? Steam_Matchmaking_Servers::history_servers : Steam_Matchmaking_Servers::favorite_servers;
@@ -302,7 +301,6 @@ bool Steam_Matchmaking::GetFavoriteGame(int iGame, AppId_t *pnAppID, uint32 *pnI
 // adds the game server to the local list; updates the time played of the server if it already exists in the list
 int Steam_Matchmaking::AddFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nConnPort, uint16 nQueryPort, uint32 unFlags, uint32 rTime32LastPlayedOnServer) {
     PRINT_DEBUG("AddFavoriteGame %lu %lu %hu %hu %lu %lu\n", nAppID, nIP, nConnPort, nQueryPort, unFlags, rTime32LastPlayedOnServer);
-    std::cout << "AddFavoriteGame, interface ver: " << old_matchmaking << std::endl;
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
     if (unFlags == k_unFavoriteFlagNone)
         return false;

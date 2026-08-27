@@ -315,7 +315,6 @@ Local_Storage::Local_Storage(std::string save_directory) {
 }
 
 void Local_Storage::setAppId(uint32 appid) {
-    std::cout << "Set appid: " << appid << std::endl;
     i_appid = appid;
     this->appid = std::to_string(appid) + PATH_SEPARATOR;
 }

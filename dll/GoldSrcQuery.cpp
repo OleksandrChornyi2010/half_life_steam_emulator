@@ -109,37 +109,19 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
     uint8_t *end = buffer + res;
     uint8_t header = read_num<uint8_t>(ptr, end);
 
-    std::cout << "\n=== (Header: 0x" << std::hex << (int)header << std::dec
-              << ") ===" << std::endl;
-
-    if (header == 0x6D) { // GoldSrc
-        std::cout << "Protocol: GoldSrc (Obsolete)" << std::endl;
+    if (header == 0x6D) {      // GoldSrc
         read_string(ptr, end); // Skip address
         std::string name = read_string(ptr, end);
-        std::cout << "Name:    " << name << std::endl;
         std::string map = read_string(ptr, end);
-        std::cout << "Map:     " << map << std::endl;
         std::string dir = read_string(ptr, end);
-        std::cout << "Folder:  " << dir << std::endl;
         std::string game = read_string(ptr, end);
-        std::cout << "Game:    " << game << std::endl;
-
         uint8_t players = read_num<uint8_t>(ptr, end);
         uint8_t max_players = read_num<uint8_t>(ptr, end);
-        std::cout << "Players: " << (int)players << "/" << (int)max_players
-                  << std::endl;
-
         uint8_t prot_ver = read_num<uint8_t>(ptr, end);
-        std::cout << "Protocol version: " << (int)prot_ver << std::endl;
-
         read_num<uint8_t>(ptr, end); // Skip server type
         read_num<uint8_t>(ptr, end); // Skip environment
-
         uint8_t visibility = read_num<uint8_t>(ptr, end);
-        std::cout << "Visibility: " << (int)visibility << std::endl;
-
         uint8_t is_mod = read_num<uint8_t>(ptr, end);
-        std::cout << "Is mod: " << (int)is_mod << std::endl;
 
         if (is_mod == 1) { // Skip mod fields
             read_string(ptr, end);
@@ -152,11 +134,7 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         }
 
         uint8_t vac = read_num<uint8_t>(ptr, end);
-        std::cout << "vac: " << (int)vac << std::endl;
-
         uint8_t bots = read_num<uint8_t>(ptr, end);
-        std::cout << "bots: " << (int)bots << std::endl;
-        std::cout << "Address: " << ip << " port: " << port << std::endl;
 
         out_data->set_server_name(name);
         out_data->set_map_name(map);
@@ -170,41 +148,20 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         out_data->set_bot_player_count(bots);
 
     } else if (header == 0x49) { // Source
-        std::cout << "Protocol: Source (Modern)" << std::endl;
         uint8_t prot_ver = read_num<uint8_t>(ptr, end);
-        std::cout << "Protocol version: " << (int)prot_ver << std::endl;
         std::string name = read_string(ptr, end);
-        std::cout << "Name:    " << name << std::endl;
         std::string map = read_string(ptr, end);
-        std::cout << "Map:     " << map << std::endl;
         std::string dir = read_string(ptr, end);
-        std::cout << "Folder:  " << dir << std::endl;
         std::string game = read_string(ptr, end);
-        std::cout << "Game:    " << game << std::endl;
-
         uint16_t app_id = read_num<uint16_t>(ptr, end);
-        std::cout << "AppID:   " << app_id << std::endl;
-
         uint8_t players = read_num<uint8_t>(ptr, end);
         uint8_t max_players = read_num<uint8_t>(ptr, end);
-        std::cout << "Players: " << (int)players << "/" << (int)max_players
-                  << std::endl;
-
         uint8_t bots = read_num<uint8_t>(ptr, end);
-        std::cout << "bots: " << (int)bots << std::endl;
-
         read_num<uint8_t>(ptr, end); // Skip server type
-
         read_num<uint8_t>(ptr, end); // Skip environment
-
         uint8_t visibility = read_num<uint8_t>(ptr, end);
-        std::cout << "Visibility: " << (int)visibility << std::endl;
-
         uint8_t vac = read_num<uint8_t>(ptr, end);
-        std::cout << "vac: " << (int)vac << std::endl;
-
         read_string(ptr, end); // Skip game version
-        std::cout << "Address: " << ip << " port: " << port << std::endl;
 
         out_data->set_server_name(name);
         out_data->set_map_name(map);
@@ -217,8 +174,6 @@ void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *o
         out_data->set_game_description(game);
         out_data->set_bot_player_count(bots);
         out_data->set_appid(app_id);
-    } else {
-        std::cout << "Unknown header type." << std::endl;
     }
 }
 
@@ -344,7 +299,6 @@ void GoldSrcQuery::AsyncWorkerLoop() {
 
                     pending[key] = {std::chrono::steady_clock::now(), req.callback};
                 } else {
-                    std::cout << "Dropping duplicate server" << std::endl;
                     Gameserver dup_gs;
                     dup_gs.set_had_successful_response(false);
                     req.callback(dup_gs);
@@ -548,9 +502,6 @@ void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, Player
     ssize_t res = query_with_challenge_sync(sock, addr, 0x55, buffer, sizeof(buffer));
 
     if (res <= 5 || buffer[4] != 0x44) {
-        std::cout << "Players: Failed (Header 0x" << std::hex
-                  << (res > 4 ? (int)buffer[4] : 0) << std::dec << ")"
-                  << std::endl;
         return;
     }
 
@@ -558,7 +509,6 @@ void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, Player
     uint8_t *end = buffer + res;
     uint8_t count = read_num<uint8_t>(ptr, end);
 
-    std::cout << "\n=== [PLAYERS] (" << (int)count << ") ===" << std::endl;
     for (int i = 0; i < count; i++) {
         read_num<uint8_t>(ptr, end); // Index
         std::string name = read_string(ptr, end);
@@ -566,9 +516,6 @@ void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, Player
         float time = read_num<float>(ptr, end);
 
         result.players.push_back({name, score, time});
-        std::cout << std::setw(2) << i << ". " << std::setw(20)
-                  << (name.empty() ? "-" : name) << " | Frags: " << std::setw(3)
-                  << score << " | Time: " << (int)time << "s" << std::endl;
     }
     result.finished = true;
 }
@@ -604,11 +551,9 @@ void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port, RulesSer
     uint8_t *end = buffer + res;
     uint16_t count = read_num<uint16_t>(ptr, end);
 
-    std::cout << "\n=== [RULES] (" << count << ") ===" << std::endl;
     for (int i = 0; i < count; i++) {
         std::string k = read_string(ptr, end);
         std::string v = read_string(ptr, end);
-        std::cout << k << " = " << v << std::endl;
         result.rules.push_back(std::make_pair(k, v));
     }
     result.finished = true;
