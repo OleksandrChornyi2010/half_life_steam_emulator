@@ -34,11 +34,11 @@ struct PlayerServerData {
 
 struct PlayerServerResult {
     std::vector<PlayerServerData> players;
-    bool finished = false;
+    bool responded = false;
 };
 struct RulesServerResult {
     std::vector<std::pair<std::string, std::string>> rules;
-    bool finished = false;
+    bool responded = false;
 };
 
 struct Steam_Matchmaking_Servers_Direct_IP_Request {
@@ -103,6 +103,7 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
     std::vector<MasterServerItem> master_servers;
     gameserveritem_t m_server_info;
     GoldSrcQuery m_goldsrc_query;
+    int MAX_SERVERS_PER_RUN = 1;
     int server_list_request = 0;
     int current_tick = 0;
     void RequestOldServerList(AppId_t iApp, ISteamMatchmakingServerListResponse001 *pRequestServersResponse, EMatchMakingType type, std::string filters = "");

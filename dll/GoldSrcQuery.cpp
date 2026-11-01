@@ -517,7 +517,7 @@ void GoldSrcQuery::GetServerPlayers(const std::string &ip, uint16_t port, Player
 
         result.players.push_back({name, score, time});
     }
-    result.finished = true;
+    result.responded = true;
 }
 
 void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port, RulesServerResult &result) {
@@ -556,5 +556,5 @@ void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port, RulesSer
         std::string v = read_string(ptr, end);
         result.rules.push_back(std::make_pair(k, v));
     }
-    result.finished = true;
+    result.responded = true;
 }

@@ -704,7 +704,6 @@ void Steam_Matchmaking_Servers::server_details(Gameserver *g, gameserveritem_t *
 // in ISteamMatchmakingServerListResponse::ServerResponded() callbacks
 gameserveritem_t *Steam_Matchmaking_Servers::GetServerDetails(HServerListRequest hRequest, int iServer) {
     std::lock_guard<std::recursive_mutex> lock(global_mutex);
-
     auto r = std::begin(requests);
     while (r != std::end(requests)) {
         if (r->old_callbacks != NULL ? (void *)r->type == hRequest : r->id == hRequest) {
@@ -977,12 +976,13 @@ void Steam_Matchmaking_Servers::CancelServerQuery(HServerQuery hServerQuery) {
 }
 
 void Steam_Matchmaking_Servers::RunCallbacks() {
+    std::vector<std::function<void()>> game_callbacks;
+    int servers_processed_this_run = 0;
     {
         PRINT_DEBUG("Steam_Matchmaking_Servers::RunCallbacks\n");
         std::lock_guard<std::recursive_mutex> lock(global_mutex);
 
         PRINT_DEBUG("REQUESTS %zu gs: %zu\n", requests.size(), gameservers.size());
-
         for (auto &r : requests) {
             if (r.responded)
                 continue;
@@ -997,16 +997,20 @@ void Steam_Matchmaking_Servers::RunCallbacks() {
                 if (r.callbacks) {
                     ISteamMatchmakingServerListResponse *cb = r.callbacks;
                     HServerListRequest req_id = r.id;
-                    cb->RefreshComplete(req_id, response);
+                    game_callbacks.push_back([cb, req_id, response]() {
+                        cb->RefreshComplete(req_id, response);
+                    });
                 } else if (r.old_callbacks) {
                     ISteamMatchmakingServerListResponse001 *cb = r.old_callbacks;
-                    cb->RefreshComplete(response);
+                    game_callbacks.push_back([cb, response]() {
+                        cb->RefreshComplete(response);
+                    });
                 }
                 r.responded = true;
                 continue;
             }
             auto g = std::begin(gameservers);
-            while (g != std::end(gameservers)) {
+            while (g != std::end(gameservers) && servers_processed_this_run < MAX_SERVERS_PER_RUN) {
                 if ((g->type != r.type || g->type == eLANServer) && check_timedout(g->last_recv, SERVER_TIMEOUT)) {
                     g = gameservers.erase(g);
                     PRINT_DEBUG("SERVER TIMEOUT\n");
@@ -1023,8 +1027,6 @@ void Steam_Matchmaking_Servers::RunCallbacks() {
 
                         if (g->single_server_refresh) {
                             item_position = g->list_position;
-                            g->single_server_refresh = false;
-                            g->list_position = 0;
                         } else {
                             r.gameservers_filtered.push_back(std::move(*g));
                             item_position = r.gameservers_filtered.size() - 1;
@@ -1032,12 +1034,17 @@ void Steam_Matchmaking_Servers::RunCallbacks() {
                         if (r.callbacks) {
                             ISteamMatchmakingServerListResponse *cb = r.callbacks;
                             HServerListRequest req_id = r.id;
-                            cb->ServerResponded(req_id, item_position);
+                            game_callbacks.push_back([cb, req_id, item_position]() {
+                                cb->ServerResponded(req_id, item_position);
+                            });
                         } else if (r.old_callbacks) {
                             ISteamMatchmakingServerListResponse001 *cb = r.old_callbacks;
-                            cb->ServerResponded(item_position);
+                            game_callbacks.push_back([cb, item_position]() {
+                                cb->ServerResponded(item_position);
+                            });
                         }
                         g = gameservers.erase(g);
+                        servers_processed_this_run++;
                     } else {
                         ++g;
                     }
@@ -1055,39 +1062,43 @@ void Steam_Matchmaking_Servers::RunCallbacks() {
                     if (dip->ping_response) {
                         ISteamMatchmakingPingResponse *cb = dip->ping_response;
                         gameserveritem_t info = dip->ping_server_info;
-                        if (info.m_bHadSuccessfulResponse) {
-                            cb->ServerResponded(info);
-                        } else {
-                            cb->ServerFailedToRespond();
-                        }
+                        game_callbacks.push_back([cb, info]() mutable {
+                            if (info.m_bHadSuccessfulResponse) {
+                                cb->ServerResponded(info);
+                            } else {
+                                cb->ServerFailedToRespond();
+                            }
+                        });
                         dip = direct_ip_requests.erase(dip);
                     } else if (dip->players_response) {
                         ISteamMatchmakingPlayersResponse *cb = dip->players_response;
                         PlayerServerResult info = dip->player_server_info;
-                        if (info.finished) {
-                            for (auto &player_info : info.players) {
-                                cb->AddPlayerToList(player_info.name.c_str(),
-                                                    player_info.score,
-                                                    player_info.time);
+                        game_callbacks.push_back([cb, info] {
+                            if (info.responded) {
+                                for (auto &player_info : info.players) {
+                                    cb->AddPlayerToList(player_info.name.c_str(),
+                                                        player_info.score,
+                                                        player_info.time);
+                                }
+                                cb->PlayersRefreshComplete();
+                            } else {
+                                cb->PlayersFailedToRespond();
                             }
-                            cb->PlayersRefreshComplete();
-                        } else {
-                            cb->PlayersFailedToRespond();
-                        }
-
+                        });
                         dip = direct_ip_requests.erase(dip);
                     } else if (dip->rules_response) {
                         ISteamMatchmakingRulesResponse *cb = dip->rules_response;
                         RulesServerResult info = dip->rules_server_info;
-                        if (info.finished) {
-                            for (const auto &rule : info.rules) {
-                                cb->RulesResponded(rule.first.c_str(), rule.second.c_str());
+                        game_callbacks.push_back([cb, info] {
+                            if (info.responded) {
+                                for (const auto &rule : info.rules) {
+                                    cb->RulesResponded(rule.first.c_str(), rule.second.c_str());
+                                }
+                                cb->RulesRefreshComplete();
+                            } else {
+                                cb->RulesFailedToRespond();
                             }
-                            cb->RulesRefreshComplete();
-                        } else {
-                            cb->RulesFailedToRespond();
-                        }
-
+                        });
                         dip = direct_ip_requests.erase(dip);
                     }
                 } else {
@@ -1095,6 +1106,9 @@ void Steam_Matchmaking_Servers::RunCallbacks() {
                 }
             }
         }
+    }
+    for (const auto &func : game_callbacks) {
+        func();
     }
 }
 void Steam_Matchmaking_Servers::Callback(Common_Message *msg) {
