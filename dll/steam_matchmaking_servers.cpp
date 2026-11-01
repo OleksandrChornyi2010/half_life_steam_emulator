@@ -493,7 +493,7 @@ HServerListRequest Steam_Matchmaking_Servers::RequestServerList(AppId_t iApp, IS
     request.type = type;
     request.id = id;
     requests.push_back(request);
-    PRINT_DEBUG("pushed new request with id: %p", request.id);
+    PRINT_DEBUG("pushed new request with id: %p\n", request.id);
     switchServers(id, type, filters);
     return id;
 }

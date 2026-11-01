@@ -187,6 +187,7 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     }
 
     bool local_save = true;
+    bool useRevEmuTokenFormat = false;
 
     if (Local_Storage::path_exists(program_path + "global_save.txt")) {
         save_path = Local_Storage::get_user_appdata_path();
@@ -225,6 +226,11 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     if (local_storage->get_data_settings("language.txt", language, sizeof(language) - 1) <= 0) {
         strcpy(language, DEFAULT_LANGUAGE);
         local_storage->store_data_settings("language.txt", language, strlen(language));
+    }
+
+    // Use RevEmu token format
+    if (Local_Storage::path_exists(local_storage->get_global_settings_path() + "use_revemu_token_format.txt")) {
+        useRevEmuTokenFormat = true;
     }
 
     // Steam ID
@@ -365,6 +371,8 @@ uint32 create_localstorage_settings(Settings **settings_client_out, Settings **s
     settings_server->set_port(port);
     settings_client->custom_broadcasts = custom_broadcasts;
     settings_server->custom_broadcasts = custom_broadcasts;
+    settings_client->useRevEmuTokenFormat = useRevEmuTokenFormat;
+    settings_server->useRevEmuTokenFormat = useRevEmuTokenFormat;
     settings_client->disable_networking = disable_networking;
     settings_server->disable_networking = disable_networking;
     settings_client->disable_overlay = disable_overlay;

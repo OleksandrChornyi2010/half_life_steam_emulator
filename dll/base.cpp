@@ -333,22 +333,54 @@ void Auth_Ticket_Manager::launch_callback_gs(CSteamID id, bool approved) {
 #define STEAM_ID_OFFSET_TICKET (4 + 8)
 #define STEAM_TICKET_MIN_SIZE (4 + 8 + 8)
 Auth_Ticket_Data Auth_Ticket_Manager::getTicketData(void *pTicket, int cbMaxTicket, uint32 *pcbTicket) {
-    uint64 steam_id = settings->get_local_steam_id().ConvertToUint64();
-    memset(pTicket, 123, cbMaxTicket);
-    ((char *)pTicket)[0] = 0x14;
-    ((char *)pTicket)[1] = 0;
-    ((char *)pTicket)[2] = 0;
-    ((char *)pTicket)[3] = 0;
-    memcpy((char *)pTicket + STEAM_ID_OFFSET_TICKET, &steam_id, sizeof(steam_id));
-    *pcbTicket = cbMaxTicket;
+    if (settings->useRevEmuTokenFormat) {
+        const std::string hardware_id = std::to_string(settings->get_local_steam_id().ConvertToUint64());
+        uint32_t hash = revHash(hardware_id.c_str());
+        uint32_t required_account_id = hash << 1;
 
-    Auth_Ticket_Data ticket_data;
-    ticket_data.id = settings->get_local_steam_id();
-    ticket_data.number = generate_steam_ticket_id();
-    uint32 ttt = ticket_data.number;
+        CSteamID revEmuId(required_account_id, 1, k_EUniversePublic, k_EAccountTypeIndividual);
+        uint64 steam_id64 = revEmuId.ConvertToUint64();
 
-    memcpy(((char *)pTicket) + sizeof(uint64), &ttt, sizeof(ttt));
-    return ticket_data;
+        RevTicket_t ticket;
+        memset(&ticket, 0, sizeof(RevTicket_t));
+        ticket.Version = 0x4A;
+        ticket.RevSignature = ('r' << 16) + ('e' << 8) + 'v';
+        ticket.Signature2 = 0;
+        ticket.SteamID = steam_id64;
+        strncpy(ticket.TicketBuf, hardware_id.c_str(), sizeof(ticket.TicketBuf) - 1);
+        ticket.Hash = hash;
+
+        uint32_t ticket_size = sizeof(RevTicket_t);
+        if (cbMaxTicket >= ticket_size) {
+            memcpy(pTicket, &ticket, ticket_size);
+            *pcbTicket = ticket_size;
+        } else {
+            *pcbTicket = 0;
+        }
+
+        Auth_Ticket_Data ticket_data;
+        ticket_data.id = revEmuId;
+        ticket_data.number = generate_steam_ticket_id();
+
+        return ticket_data;
+    } else {
+        uint64 steam_id = settings->get_local_steam_id().ConvertToUint64();
+        memset(pTicket, 123, cbMaxTicket);
+        ((char *)pTicket)[0] = 0x14;
+        ((char *)pTicket)[1] = 0;
+        ((char *)pTicket)[2] = 0;
+        ((char *)pTicket)[3] = 0;
+        memcpy((char *)pTicket + STEAM_ID_OFFSET_TICKET, &steam_id, sizeof(steam_id));
+        *pcbTicket = cbMaxTicket;
+
+        Auth_Ticket_Data ticket_data;
+        ticket_data.id = settings->get_local_steam_id();
+        ticket_data.number = generate_steam_ticket_id();
+        uint32 ttt = ticket_data.number;
+
+        memcpy(((char *)pTicket) + sizeof(uint64), &ttt, sizeof(ttt));
+        return ticket_data;
+    }
 }
 // Conan Exiles doesn't work with 512 or 128, 256 seems to be the good size
 // Steam returns 234

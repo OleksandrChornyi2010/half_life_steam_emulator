@@ -444,6 +444,25 @@ class SteamCallBacks {
     }
 };
 
+#pragma pack(push, 1)
+struct RevTicket_t {
+    uint32_t Version;
+    uint32_t Hash;
+    uint32_t RevSignature;
+    uint32_t Signature2;
+    uint64_t SteamID;
+    char TicketBuf[128];
+};
+#pragma pack(pop)
+
+static uint32_t revHash(const char *str, int n = -1) {
+    uint32_t hash = 0x4E67C6A7;
+    for (int cc = *str; cc && n != 0; cc = *++str, --n) {
+        hash ^= (hash >> 2) + cc + 32 * hash;
+    }
+    return hash;
+}
+
 struct Auth_Ticket_Data {
     CSteamID id;
     uint64 number;

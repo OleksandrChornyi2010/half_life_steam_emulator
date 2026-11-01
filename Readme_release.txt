@@ -1,4 +1,4 @@
-====Goldberg Steam Emulator====
+====Half-Life Steam Emulator====
 
 An emulator that supports LAN multiplayer without steam.
 

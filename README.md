@@ -1,6 +1,6 @@
 # half_file_steam_emulator
 
-This is a fork of [Goldberg steam emulator](https://gitlab.com/Mr_Goldberg/goldberg_emulator/) with the aim to make half-life based games' server browser work like the original one. For a readme on how to use it see: [The Release Readme](Readme_release.txt)
+This is a fork of [Goldberg steam emulator](https://gitlab.com/Mr_Goldberg/goldberg_emulator/) with the aim to make half-life based games' server browser work like the original one. For a readme on how to use basic emulator features see: [The Release Readme](Readme_release.txt)
 
 ## How to use
 
@@ -21,12 +21,15 @@ You can download stable builds from the [release section](https://github.com/Ole
 ## Features
 
 - Supports both Linux and Windows
-- Emulator can now work with favorite and history servers saved locally in `<steam_emulator_data_dir>`/platform/serverbrowser_hist.vdf.
-- Can get internet and spectator servers from multiple master servers written in <steam_emulator_data_dir>`/platform/MasterServers.vdf.
+- Emulator can work with favorite and history server lists saved locally in `<steam_emulator_data_dir>`/platform/serverbrowser_hist.vdf.
+- Emulator can get internet and spectator servers from multiple master servers written in `<steam_emulator_data_dir>`/platform/MasterServers.vdf.
 
 ## Setting up
 
-Run the game once to create serverbrowser*hist.vdf and MasterServers.vdf files. Favorites and history lists will work out of the box, but you need to add a master server ip/domain into the `<steam_emulator_data_dir>`/platform/MasterServers.vdf file. Simply replace \_master server ip/domain goes here* text with master server ip or domain. If you want to have multiple master servers, you can copy a block that starts with `"0"` (or any other number) and ends with `}` and paste in right below the block that you copied, and change the address in the block that you pasted.
+Run the game once to create serverbrowser_hist.vdf and MasterServers.vdf files. Favorites and history lists will work out of the box, but you need to add a master server ip/domain into the `<steam_emulator_data_dir>`/platform/MasterServers.vdf file. Simply replace `master server ip/domain goes here` text with master server ip or domain. If you want to have multiple master servers, you can copy a block that starts with `"0"` (or any other number) and ends with `}` and paste in right below the block that you copied, and change the address in the block that you pasted.
+
+If you get an error `Sorry, no-steam p48 clients are not allowed on
+this server` while joining a server, you can create a file `use_revemu_token_format.txt` in `<steam_emulator_data_dir>`/settings/ directory to tell the emulator to use RevEmu token format in an Auth ticket.
 
 ## Contributions
 
@@ -61,7 +64,7 @@ Notice that you need 32-bit protobuf built as a static library so the resulting 
 
 ##### Preparation:
 
-Protobuf and protoc built into _/opt/protobuf-32_ are required. You can use `build_protobuf.sh` script to build protobuf and protoc. Launch with **sudo**.
+Protobuf and protoc built into _/opt/protobuf-32_ are required. You can use `build_protobuf.sh` script (requires root privileges) to build protobuf and protoc.
 
 ##### Building:
 
@@ -80,7 +83,7 @@ You can use Linux cross platform compiler MinGW for the windows build.
 
 32 bit version of MinGW Compiler is required.
 
-Protobuf built into _/opt/protobuf-mingw32_ **using MinGW**, and protoc built into _/opt/protobuf-32_ **using any linux compiler** are required. You can use `build_protobuf.sh` script to build protobuf and protoc. Launch with **sudo**.
+Protobuf built into _/opt/protobuf-mingw32_ **using MinGW**, and protoc built into _/opt/protobuf-32_ **using any linux compiler** are required. You can use `build_protobuf.sh` script (requires root privileges) to build protobuf and protoc.
 
 ##### Building:
 
@@ -95,7 +98,7 @@ cmake --build --preset mingw-win-x86-release -j$(nproc)
 
 #### Preparation
 
-Protobuf and protoc built into _C:\\Libraries\\protobuf-32_ are required. You can use `build_protobuf.ps1` script to build protobuf and protoc. Launch with **administrator privileges**
+Protobuf and protoc built into _C:\\Libraries\\protobuf-32_ are required. You can use `build_protobuf.ps1` script (requires administrator privileges) to build protobuf and protoc.
 
 ##### Building .dll:
 
