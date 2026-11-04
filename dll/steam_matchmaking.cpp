@@ -325,7 +325,7 @@ int Steam_Matchmaking::AddFavoriteGame(AppId_t nAppID, uint32 nIP, uint16 nConnP
     }
     if (!found) {
         ServerItem item;
-        std::string str_ip = Steam_Matchmaking_Servers::ip_to_string(nIP);
+        std::string str_ip = Steam_Matchmaking_Servers::host_order_ip_to_string(nIP);
         item.ip = str_ip;
         item.port = nConnPort;
         item.last_played = rTime32LastPlayedOnServer;

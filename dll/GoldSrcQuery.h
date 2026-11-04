@@ -93,13 +93,15 @@ class GoldSrcQuery {
 
     void GetServerPlayers(const std::string &ip, uint16_t port, PlayerServerResult &result);
     void GetServerRules(const std::string &ip, uint16_t port, RulesServerResult &result);
+    void ResetWorker();
 
   private:
     const time_t LOOP_INTERVAL_SECONDS = 0;
     const suseconds_t LOOP_INTERVAL_MICROSECONDS = 50 * 100;
-    const size_t MAX_ASYNC_CONCURRENT_QUERIES = 75;
+    const size_t MAX_ASYNC_CONCURRENT_QUERIES = 25;
     static const uint16_t REQUEST_TIMEOUT = 2500;
     const int SOCKET_BUFFER_SIZE = 1024 * 1024;
+    bool reset_asnyc_worker = false;
 
     CallbackWorker callback_worker;
 
@@ -113,7 +115,7 @@ class GoldSrcQuery {
         return val;
     }
 
-    void parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *out_data, const std::string &ip, uint16_t port);
+    void parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *out_data);
     ssize_t query_with_challenge_sync(int sock, const sockaddr_in &addr, uint8_t type, uint8_t *buffer, size_t size);
     struct AsyncRequest {
         uint32_t ip_net;

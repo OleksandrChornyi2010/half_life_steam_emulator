@@ -104,7 +104,7 @@ std::string GoldSrcQuery::read_string(uint8_t *&ptr, uint8_t *end) {
     return str;
 }
 
-void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *out_data, const std::string &ip, uint16_t port) {
+void GoldSrcQuery::parse_info_buffer(uint8_t *buffer, ssize_t res, Gameserver *out_data) {
     uint8_t *ptr = &buffer[4];
     uint8_t *end = buffer + res;
     uint8_t header = read_num<uint8_t>(ptr, end);
@@ -282,6 +282,12 @@ void GoldSrcQuery::AsyncWorkerLoop() {
     const std::vector<uint8_t> info_req = {0xFF, 0xFF, 0xFF, 0xFF, 0x54, 'S', 'o', 'u', 'r', 'c', 'e', ' ', 'E', 'n', 'g', 'i', 'n', 'e', ' ', 'Q', 'u', 'e', 'r', 'y', 0x00};
 
     while (is_running) {
+        if (reset_asnyc_worker) {
+            pending.clear();
+            std::lock_guard<std::mutex> lock(queue_mutex);
+            request_queue.clear();
+            reset_asnyc_worker = false;
+        }
         if (pending.size() < MAX_ASYNC_CONCURRENT_QUERIES) {
             std::lock_guard<std::mutex> lock(queue_mutex);
             size_t sent_count = 0;
@@ -298,10 +304,6 @@ void GoldSrcQuery::AsyncWorkerLoop() {
                     sendto(m_async_sock, reinterpret_cast<const char *>(info_req.data()), info_req.size(), 0, (struct sockaddr *)&addr, sizeof(addr));
 
                     pending[key] = {std::chrono::steady_clock::now(), req.callback};
-                } else {
-                    Gameserver dup_gs;
-                    dup_gs.set_had_successful_response(false);
-                    req.callback(dup_gs);
                 }
 
                 sent_count++;
@@ -321,7 +323,7 @@ void GoldSrcQuery::AsyncWorkerLoop() {
 
         int ret = select(m_async_sock + 1, &read_fds, nullptr, nullptr, &tv);
 
-        std::vector<std::pair<std::function<void(const Gameserver &)>, Gameserver>> ready_callbacks;
+        std::vector<std::pair<std::function<void(const Gameserver &)>, Gameserver>> query_callbacks;
         if (ret > 0 && FD_ISSET(m_async_sock, &read_fds)) {
             while (true) {
                 uint8_t buffer[2048];
@@ -368,38 +370,39 @@ void GoldSrcQuery::AsyncWorkerLoop() {
                     auto now = std::chrono::steady_clock::now();
                     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second.start).count();
 
-                    char ip_str[INET_ADDRSTRLEN];
-                    inet_ntop(AF_INET, &(from.sin_addr), ip_str, INET_ADDRSTRLEN);
-
                     Gameserver gs;
-                    parse_info_buffer(buffer, received, &gs, std::string(ip_str), ntohs(from.sin_port));
+                    parse_info_buffer(buffer, received, &gs);
                     gs.set_latency(static_cast<uint32_t>(duration));
                     gs.set_had_successful_response(true);
                     gs.set_ip(ntohl(from.sin_addr.s_addr));
                     gs.set_port(ntohs(from.sin_port));
                     gs.set_query_port(ntohs(from.sin_port));
-                    ready_callbacks.push_back({it->second.callback, gs});
+                    query_callbacks.push_back({it->second.callback, gs});
                     pending.erase(it);
                 }
             }
-        }
-
-        for (const auto &item : ready_callbacks) {
-            callback_worker.EnqueueTask([cb = item.first, gs = item.second]() {
-                cb(gs);
-            });
         }
 
         auto now = std::chrono::steady_clock::now();
         for (auto it = pending.begin(); it != pending.end();) {
             if (std::chrono::duration_cast<std::chrono::milliseconds>(now - it->second.start).count() > REQUEST_TIMEOUT) {
                 Gameserver failed_gs;
+                uint32_t ip_net = static_cast<uint32_t>(it->first >> 32);
+                uint16_t port_net = static_cast<uint16_t>(it->first & 0xFFFF);
+                failed_gs.set_ip(ntohl(ip_net));
+                failed_gs.set_port(ntohs(port_net));
                 failed_gs.set_had_successful_response(false);
-                it->second.callback(failed_gs);
+                query_callbacks.push_back({it->second.callback, failed_gs});
                 it = pending.erase(it);
             } else {
                 ++it;
             }
+        }
+
+        for (const auto &item : query_callbacks) {
+            callback_worker.EnqueueTask([cb = item.first, gs = item.second]() {
+                cb(gs);
+            });
         }
     }
 }
@@ -557,4 +560,8 @@ void GoldSrcQuery::GetServerRules(const std::string &ip, uint16_t port, RulesSer
         result.rules.push_back(std::make_pair(k, v));
     }
     result.responded = true;
+}
+
+void GoldSrcQuery::ResetWorker() {
+    reset_asnyc_worker = true;
 }

@@ -116,7 +116,7 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
     void ReadInput();
 
     void DebugListServers(const Steam_Matchmaking_Request &r, const std::string &label);
-    void OnInternetServerInfoReceived(const Gameserver &_gs, std::string server_ip, uint16_t server_port, uint32_t last_played, EMatchMakingType type, HServerListRequest id, bool isRefreshQuery = false, int iServer = -2);
+    void OnInternetServerInfoReceived(const Gameserver &_gs, std::string server_ip, uint16_t server_port, EMatchMakingType type, HServerListRequest id, bool isRefreshQuery = false, int iServer = -2);
     void reactivate_request(Steam_Matchmaking_Request &r);
     void ProcessPingRequest(uint32 unIP, uint16 usPort, HServerQuery id);
     void ProcessPlayerRequest(HServerQuery id, uint32 unIP, uint16 usPort);
@@ -126,7 +126,7 @@ class Steam_Matchmaking_Servers : public ISteamMatchmakingServers,
   public:
     inline static std::vector<ServerItem> history_servers;
     inline static std::vector<ServerItem> favorite_servers;
-    static std::string ip_to_string(uint32_t ip_host_order);
+    static std::string host_order_ip_to_string(uint32_t ip_host_order);
     static void ParseServersFile(EMatchMakingType request_type, std::vector<ServerItem> &vec);
     static void ParseMasterServersFile(std::vector<MasterServerItem> &vec);
     static VDFNode ConvertToNode();
